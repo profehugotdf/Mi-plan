@@ -575,6 +575,7 @@ function calcularEstadoActual(registro, hastaISO) {
   if (inicio < ventanaMin) inicio = ventanaMin;
 
   let ctl = 0, atl = 0, ctlPrev = 0, atlPrev = 0;
+  const serie = [];
   const cursor = new Date(inicio);
   while (cursor <= hasta) {
     const iso = cursor.toISOString().slice(0, 10);
@@ -582,11 +583,13 @@ function calcularEstadoActual(registro, hastaISO) {
     ctlPrev = ctl; atlPrev = atl;
     ctl = ctl + (tss - ctl) / TC_CTL;
     atl = atl + (tss - atl) / TC_ATL;
+    // tsb "de ese día" = brecha ANTES de sumar el tss de ese día — misma convención que
+    // pasoEWMA() en Correr/Kayak/Bici (tsb representa la frescura con la que arrancaste el día).
+    serie.push({ fecha: iso, ctl, atl, tsb: ctlPrev - atlPrev });
     cursor.setDate(cursor.getDate() + 1);
   }
-  // tsb "de hoy" = brecha ctl/atl ANTES de sumar el tss de hoy — misma convención que
-  // pasoEWMA() en Correr/Kayak (tsb representa la frescura con la que arrancaste el día).
-  return { ctl, atl, tsb: ctlPrev - atlPrev, tieneDatos: fechas.length > 0 };
+  const ultimo = serie[serie.length - 1] || { ctl: 0, atl: 0, tsb: 0 };
+  return { ctl: ultimo.ctl, atl: ultimo.atl, tsb: ultimo.tsb, tieneDatos: fechas.length > 0, serie };
 }
 
 // TSS diario promedio estimado para una fecha, repartiendo el volumen semanal
@@ -1240,9 +1243,10 @@ function renderProyeccionForma() {
   const estado = calcularEstadoActual(registro, hoy);
   const overridesCiclo = overridesAll[store.activoId] || {};
   const futuros = proyectarForma(config, overridesCiclo, hoy, estado.ctl, estado.atl);
-  const puntos = [{ fecha: hoy, ctl: estado.ctl, atl: estado.atl, tsb: estado.tsb }].concat(futuros);
+  const puntos = estado.serie.concat(futuros);
+  const idxHoy = estado.serie.length - 1;
 
-  dibujarGraficoForma(puntos);
+  dibujarGraficoForma(puntos, idxHoy);
 
   const ctlFinal = puntos[puntos.length - 1].ctl;
   const tsbMinPt = puntos.reduce((min, p) => (p.tsb < min.tsb ? p : min), puntos[0]);
@@ -1255,10 +1259,11 @@ function renderProyeccionForma() {
     '<span><span class="dot" style="background:#5aa9d6"></span>CTL · aptitud</span>' +
     '<span><span class="dot" style="background:#d9705a"></span>ATL · fatiga</span>' +
     '<span><span class="dot" style="background:#e0a458"></span>TSB · forma</span>' +
+    '<span>línea llena = real, punteada = proyectado</span>' +
     (estado.tieneDatos ? '' : '<span>(sin historial real todavía, arranca en 0)</span>');
 }
 
-function dibujarGraficoForma(puntos) {
+function dibujarGraficoForma(puntos, idxHoy) {
   const svg = document.getElementById('formaSvg');
   const padL = 42, padR = 8, padB = 24, padT = 10;
   const plotH = 190;
@@ -1290,16 +1295,23 @@ function dibujarGraficoForma(puntos) {
     html += '<text x="' + (padL - 6) + '" y="' + (y + 3).toFixed(1) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + Math.round(val) + '</text>';
   });
 
-  function linea(color, key) {
-    const pts = puntos.map((p, i) => xAt(i).toFixed(1) + ',' + yAt(p[key]).toFixed(1));
-    return '<path d="M' + pts.join(' L') + '" fill="none" stroke="' + color + '" stroke-width="2"></path>';
-  }
-  html += linea('#5aa9d6', 'ctl');
-  html += linea('#d9705a', 'atl');
-  html += linea('#e0a458', 'tsb');
+  // línea vertical marcando "hoy" — separa lo real (izquierda) de lo proyectado (derecha)
+  const xHoy = xAt(idxHoy);
+  html += '<line x1="' + xHoy.toFixed(1) + '" y1="' + padT + '" x2="' + xHoy.toFixed(1) + '" y2="' + (padT + plotH) + '" stroke="#e7edf2" stroke-width="1" stroke-dasharray="2,2" opacity="0.5"></line>';
 
-  // marca "hoy" (primer punto)
-  html += '<circle cx="' + xAt(0) + '" cy="' + yAt(puntos[0].ctl).toFixed(1) + '" r="2.5" fill="#e7edf2"></circle>';
+  function segmento(color, key, desde, hasta, dash) {
+    const pts = [];
+    for (let i = desde; i <= hasta; i++) pts.push(xAt(i).toFixed(1) + ',' + yAt(puntos[i][key]).toFixed(1));
+    if (pts.length < 2) return '';
+    return '<path d="M' + pts.join(' L') + '" fill="none" stroke="' + color + '" stroke-width="2"' + (dash ? ' stroke-dasharray="4,3"' : '') + '></path>';
+  }
+  ['ctl', 'atl', 'tsb'].forEach((key, idx) => {
+    const color = ['#5aa9d6', '#d9705a', '#e0a458'][idx];
+    html += segmento(color, key, 0, idxHoy, false);
+    html += segmento(color, key, idxHoy, puntos.length - 1, true);
+  });
+
+  html += '<circle cx="' + xHoy.toFixed(1) + '" cy="' + yAt(puntos[idxHoy].ctl).toFixed(1) + '" r="2.5" fill="#e7edf2"></circle>';
 
   puntos.forEach((p, i) => {
     if (i % 14 === 0 || i === puntos.length - 1) {
