@@ -278,16 +278,28 @@
         <label>Nombre del ciclo</label>
         <input type="text" id="fNombre" placeholder="Ej: Base verano 2026">
       </div>
+      <div class="field">
+        <label>Fecha de inicio</label>
+        <input type="date" id="fFechaInicio">
+      </div>
+
+      <h3 style="margin-top:10px">Evento objetivo (opcional)</h3>
+      <p>Si cargás una fecha de evento, la duración del ciclo se calcula sola — desde el inicio hasta ese día — y el taper termina justo ahí.</p>
       <div class="row">
         <div class="field">
-          <label>Fecha de inicio</label>
-          <input type="date" id="fFechaInicio">
+          <label>Nombre del evento</label>
+          <input type="text" id="fEventoNombre" placeholder="10k La Gaceta">
         </div>
         <div class="field">
-          <label>Duración (semanas)</label>
-          <input type="number" id="fSemanas" min="1" step="1">
+          <label>Fecha del evento</label>
+          <input type="date" id="fEventoFecha">
         </div>
       </div>
+      <div class="field" id="fSemanasWrap">
+        <label>o, sin evento fijo: duración (semanas)</label>
+        <input type="number" id="fSemanas" min="1" step="1">
+      </div>
+      <p class="hint" id="duracionCalculadaHint"></p>
       <div class="field">
         <label>Forma de la curva de incremento</label>
         <input type="range" id="fKSlider" min="0" max="100" step="1" value="50">
@@ -713,6 +725,7 @@ function configDefault() {
     k: 0.02,
     horasSemana: { inicio: 5, fin: 10 },
     taper: { dias: 0, reduccionPct: 0 },
+    eventoNombre: '', eventoFecha: '',
     patronCargaSemanal: [85, 90, 95, 100],
     disciplinas: {
       natacion: { pctInicio: 20, pctFin: 20, sesionesInicio: 2, sesionesFin: 3, diasSemana: [] },
@@ -741,6 +754,8 @@ function configDefault() {
 // Ciclos guardados antes de la función de series tenían zonas planas {inicio,fin}
 // (= tiempo de trabajo). Esto las convierte al formato con trabajo/recuperación/series.
 function migrarCiclo(config) {
+  if (config.eventoNombre === undefined) config.eventoNombre = '';
+  if (config.eventoFecha === undefined) config.eventoFecha = '';
   if (!config.taper) config.taper = { dias: 0, reduccionPct: 0 };
   if (config.disciplinas) {
     Object.keys(config.disciplinas).forEach((k) => {
@@ -912,12 +927,54 @@ function calcularSemanaMitad(totalDias, k) {
   return Math.max(1, Math.min(totalDias, d));
 }
 
+// Duración del ciclo: si hay fecha de evento cargada, se calcula desde el inicio hasta esa
+// fecha (el evento es el último día del ciclo, y el taper termina justo ahí). Si no, se usa
+// el campo de semanas de siempre.
+function calcularTotalDiasDesdeForm() {
+  const fechaInicio = document.getElementById('fFechaInicio').value;
+  const fechaEvento = document.getElementById('fEventoFecha').value;
+  if (fechaInicio && fechaEvento) {
+    const di = new Date(fechaInicio + 'T00:00:00');
+    const de = new Date(fechaEvento + 'T00:00:00');
+    const dias = Math.round((de - di) / 86400000) + 1;
+    if (dias >= 1) return dias;
+  }
+  const semanas = Math.max(1, Math.round(parseFloat(document.getElementById('fSemanas').value) || 1));
+  return semanas * 7;
+}
+
+function actualizarHintDuracion() {
+  const fechaInicio = document.getElementById('fFechaInicio').value;
+  const fechaEvento = document.getElementById('fEventoFecha').value;
+  const hint = document.getElementById('duracionCalculadaHint');
+  const wrapSemanas = document.getElementById('fSemanasWrap');
+  if (fechaInicio && fechaEvento) {
+    const dias = calcularTotalDiasDesdeForm();
+    const di = new Date(fechaInicio + 'T00:00:00');
+    const de = new Date(fechaEvento + 'T00:00:00');
+    const diasCrudos = Math.round((de - di) / 86400000) + 1;
+    if (diasCrudos >= 1) {
+      wrapSemanas.style.display = 'none';
+      hint.style.color = '';
+      hint.textContent = 'Duración calculada: ' + dias + ' días (~' + (dias / 7).toFixed(1) + ' semanas), del ' + fechaInicio + ' al ' + fechaEvento + '.';
+    } else {
+      wrapSemanas.style.display = 'block';
+      hint.style.color = 'var(--warn)';
+      hint.textContent = 'La fecha del evento tiene que ser posterior a la fecha de inicio.';
+    }
+  } else {
+    wrapSemanas.style.display = 'block';
+    hint.style.color = '';
+    hint.textContent = '';
+  }
+}
+
 function dibujarGraficoHoras() {
   const svg = document.getElementById('graficoHoras');
   if (!svg) return;
+  actualizarHintDuracion();
   const k = parseFloat(document.getElementById('fK').value) || 0.001;
-  const semanas = Math.max(1, Math.round(parseFloat(document.getElementById('fSemanas').value) || 1));
-  const totalDias = semanas * 7;
+  const totalDias = calcularTotalDiasDesdeForm();
   const horasIni = parseFloat(document.getElementById('fHorasIni').value) || 0;
   const horasFin = parseFloat(document.getElementById('fHorasFin').value) || 0;
   const taperDias = Math.max(0, Math.round(parseFloat(document.getElementById('fTaperDias').value) || 0));
@@ -967,7 +1024,7 @@ function dibujarGraficoHoras() {
   info.textContent = 'Con k=' + k + ': ' + forma + '. La mitad del incremento total ya pasó en la semana ' + semanaMitad + ' de ' + semanas + '.';
 }
 
-['fK', 'fSemanas', 'fHorasIni', 'fHorasFin', 'fTaperDias', 'fTaperPct'].forEach((id) => {
+['fK', 'fSemanas', 'fHorasIni', 'fHorasFin', 'fTaperDias', 'fTaperPct', 'fFechaInicio', 'fEventoFecha'].forEach((id) => {
   document.getElementById(id).addEventListener('input', dibujarGraficoHoras);
 });
 
@@ -1258,7 +1315,8 @@ function renderPanorama() {
   leyenda.innerHTML = '<div class="zoneLegend">' + ciclos.map((c, i) => {
     const color = PALETA_CICLOS[i % PALETA_CICLOS.length];
     const taperTxt = (c.config.taper && c.config.taper.dias > 0) ? (' · taper ' + c.config.taper.dias + 'd') : '';
-    return '<span><span class="dot" style="background:' + color + '"></span>' + c.config.nombre + ' (' + c.config.fechaInicio + ' → ' + finCicloISO(c.config) + taperTxt + ')</span>';
+    const eventoTxt = c.config.eventoNombre ? (' 🏁 ' + c.config.eventoNombre) : '';
+    return '<span><span class="dot" style="background:' + color + '"></span>' + c.config.nombre + eventoTxt + ' (' + c.config.fechaInicio + ' → ' + finCicloISO(c.config) + taperTxt + ')</span>';
   }).join('') + '</div>';
 }
 
@@ -1322,6 +1380,11 @@ function dibujarPanorama(ciclos) {
 
     const xEtiqueta = xAtFecha(config.fechaInicio) + 3;
     html += '<text x="' + xEtiqueta.toFixed(1) + '" y="' + (padT - 4) + '" font-size="9" fill="' + color + '" font-family="monospace" font-weight="bold">' + config.nombre + '</text>';
+
+    if (config.eventoNombre) {
+      const xEvento = xAtFecha(finIso);
+      html += '<text x="' + xEvento.toFixed(1) + '" y="' + (padT + plotH + 14) + '" text-anchor="end" font-size="9" fill="' + color + '">🏁</text>';
+    }
   });
 
   const hoy = hoyISO();
@@ -1755,6 +1818,8 @@ function abrirFormularioCiclo(id) {
   document.getElementById('formCicloCard').style.display = 'block';
   document.getElementById('fNombre').value = cicloEnEdicion.nombre;
   document.getElementById('fFechaInicio').value = cicloEnEdicion.fechaInicio;
+  document.getElementById('fEventoNombre').value = cicloEnEdicion.eventoNombre || '';
+  document.getElementById('fEventoFecha').value = cicloEnEdicion.eventoFecha || '';
   document.getElementById('fSemanas').value = Math.round(cicloEnEdicion.totalDias / 7);
   document.getElementById('fK').value = cicloEnEdicion.k;
   document.getElementById('fKSlider').value = posDesdeK(cicloEnEdicion.k);
@@ -1888,7 +1953,9 @@ document.getElementById('btnCancelarCiclo').addEventListener('click', () => {
 document.getElementById('btnGuardarCiclo').addEventListener('click', () => {
   cicloEnEdicion.nombre = document.getElementById('fNombre').value.trim() || 'Ciclo sin nombre';
   cicloEnEdicion.fechaInicio = document.getElementById('fFechaInicio').value;
-  cicloEnEdicion.totalDias = Math.max(1, Math.round(parseFloat(document.getElementById('fSemanas').value) || 12) * 7);
+  cicloEnEdicion.eventoNombre = document.getElementById('fEventoNombre').value.trim();
+  cicloEnEdicion.eventoFecha = document.getElementById('fEventoFecha').value;
+  cicloEnEdicion.totalDias = calcularTotalDiasDesdeForm();
   cicloEnEdicion.k = parseFloat(document.getElementById('fK').value) || 0.02;
   cicloEnEdicion.horasSemana.inicio = parseFloat(document.getElementById('fHorasIni').value) || 0;
   cicloEnEdicion.horasSemana.fin = parseFloat(document.getElementById('fHorasFin').value) || 0;
