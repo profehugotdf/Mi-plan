@@ -418,6 +418,17 @@
   <!-- DATOS -->
   <section class="panel" id="panel-datos">
     <div class="card">
+      <h3>Perfil</h3>
+      <p style="margin-bottom:10px">Se guarda en <span class="mono">entrenamiento_perfil</span> (compartido con Correr/Bici/Kayak).</p>
+      <div class="field">
+        <label>Peso (kg)</label>
+        <input type="number" id="uPeso" min="0" step="0.1">
+      </div>
+      <button class="primary" style="width:100%" id="btnGuardarPerfil">Guardar perfil</button>
+      <p class="hint" id="perfilActualizado" style="margin-top:6px"></p>
+    </div>
+
+    <div class="card">
       <h3>Umbrales personales</h3>
       <p style="margin-bottom:10px">Se guardan en <span class="mono">entrenamiento_umbrales</span> (compartido con Correr/Bici/Kayak). Con esto, las tarjetas de "Plan de hoy" muestran ritmo/vatios/pulso objetivo, además del tiempo, para cada disciplina activa.</p>
       <div class="field">
@@ -443,6 +454,7 @@
         <input type="text" id="uRitmoNatacion" placeholder="1:35">
       </div>
       <button class="primary" style="width:100%" id="btnGuardarUmbrales">Guardar umbrales</button>
+      <button style="width:100%;margin-top:8px" id="btnImportarUmbrales">Traer lo que ya tengo cargado en Correr/Bici/Kayak</button>
       <p class="hint" id="umbralesActualizado" style="margin-top:6px"></p>
     </div>
 
@@ -1075,6 +1087,34 @@ function targetsPorZona(zonaKey, discActivasHoy) {
   return out;
 }
 
+const LS_PERFIL = 'entrenamiento_perfil';
+
+function leerPerfil() {
+  try {
+    return JSON.parse(localStorage.getItem(LS_PERFIL)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+function guardarPerfil(p) {
+  localStorage.setItem(LS_PERFIL, JSON.stringify(p));
+}
+
+function cargarFormularioPerfil() {
+  const p = leerPerfil();
+  document.getElementById('uPeso').value = p.pesoKg || '';
+  document.getElementById('perfilActualizado').textContent = p.actualizado ? ('Última actualización: ' + p.actualizado) : 'Todavía no cargaste tu peso.';
+}
+
+document.getElementById('btnGuardarPerfil').addEventListener('click', () => {
+  const p = leerPerfil(); // objeto completo, para no pisar campos que agreguen otras apps (ej. edad)
+  p.pesoKg = parseFloat(document.getElementById('uPeso').value) || null;
+  p.actualizado = hoyISO();
+  guardarPerfil(p);
+  cargarFormularioPerfil();
+  toast('Perfil guardado ✓');
+});
+
 function cargarFormularioUmbrales() {
   const u = leerUmbrales();
   document.getElementById('uRitmoCarrera').value = u.ritmoUmbralCarreraSegKm ? segARelojes(u.ritmoUmbralCarreraSegKm) : '';
@@ -1084,6 +1124,47 @@ function cargarFormularioUmbrales() {
   document.getElementById('uRitmoNatacion').value = u.ritmoUmbralNatacion100m ? segARelojes(u.ritmoUmbralNatacion100m) : '';
   document.getElementById('umbralesActualizado').textContent = u.actualizado ? ('Última actualización: ' + u.actualizado) : 'Todavía no cargaste ningún umbral.';
 }
+
+// Lee las claves privadas reales de Correr/Bici/Kayak (mismo origen) y precarga el
+// formulario de umbrales — no guarda solo; el usuario confirma con "Guardar umbrales".
+function importarUmbralesDeApps() {
+  function tryParse(key) {
+    try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
+  }
+  const zonasCorrer = tryParse('correr_zonas');
+  const cfgBici = tryParse('bici_config');
+  const pulsoKayak = tryParse('kayak_umbral_pulso');
+  const perfilCorrer = tryParse('correr_perfil');
+
+  const encontrados = [];
+  if (zonasCorrer && zonasCorrer.umbralRitmoSegKm) {
+    document.getElementById('uRitmoCarrera').value = segARelojes(zonasCorrer.umbralRitmoSegKm);
+    encontrados.push('ritmo de Correr');
+  }
+  if (zonasCorrer && zonasCorrer.umbralPulso) {
+    document.getElementById('uPulsoCarrera').value = zonasCorrer.umbralPulso;
+    encontrados.push('pulso de Correr');
+  }
+  if (cfgBici && cfgBici.ftp) {
+    document.getElementById('uFtpBici').value = cfgBici.ftp;
+    encontrados.push('FTP de Bici');
+  }
+  if (pulsoKayak) {
+    document.getElementById('uPulsoKayak').value = pulsoKayak;
+    encontrados.push('pulso de Kayak');
+  }
+  if (perfilCorrer && perfilCorrer.pesoKg) {
+    document.getElementById('uPeso').value = perfilCorrer.pesoKg;
+    encontrados.push('peso de Correr');
+  }
+
+  if (encontrados.length) {
+    toast('Traído: ' + encontrados.join(', ') + ' — revisá y tocá Guardar');
+  } else {
+    toast('No encontré umbrales cargados en esas apps todavía');
+  }
+}
+document.getElementById('btnImportarUmbrales').addEventListener('click', importarUmbralesDeApps);
 
 document.getElementById('btnGuardarUmbrales').addEventListener('click', () => {
   const u = {
@@ -2040,6 +2121,7 @@ renderHeader();
 renderListaCiclos();
 renderHoy();
 cargarFormularioUmbrales();
+cargarFormularioPerfil();
 </script>
 </body>
 </html>
