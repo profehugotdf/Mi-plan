@@ -410,7 +410,13 @@
         <svg id="formaSvg"></svg>
       </div>
       <div class="statGrid" id="formaStats" style="margin-top:10px"></div>
+      <div id="formaEventos" style="margin-top:8px;display:none"></div>
+      <p class="hint" id="formaAviso" style="margin-top:8px;color:var(--warn);display:none"></p>
       <div class="zoneLegend" id="formaLeyenda" style="margin-top:6px"></div>
+      <div class="zoneLegend" style="margin-top:4px">
+        <span><span class="dot" style="background:#d9705a"></span>banda roja: TSB &lt; -30, riesgo</span>
+        <span><span class="dot" style="background:#5fb88a"></span>banda verde: TSB +5 a +25, óptimo pre-competencia</span>
+      </div>
       <p class="hint" style="margin-top:8px">Estimación para planificar. El TSS real de Correr/Kayak sale de (pulso promedio ÷ pulso umbral)² × horas × 100; acá, al no tener el pulso real de una sesión futura, se usa el %pulso máx objetivo de esa semana en su lugar — da un TSS algo más alto si tu umbral real es menor al 100% del máximo. El resto de la fórmula (EWMA 42/7 días, TSB = brecha del día anterior) es idéntico al de Correr, Kayak y ahora también Bici Indoor.</p>
     </div>
   </section>
@@ -1590,6 +1596,39 @@ function renderProyeccionForma() {
     '<div class="stat"><div class="v">' + Math.round(ctlFinal) + '</div><div class="l">CTL fin de temporada</div></div>' +
     '<div class="stat"><div class="v">' + Math.round(tsbMinPt.tsb) + '</div><div class="l">TSB mín. (' + tsbMinPt.fecha.slice(5) + ')</div></div>';
 
+  const mapaPuntos = {};
+  puntos.forEach((p) => { mapaPuntos[p.fecha] = p; });
+  const eventosEl = document.getElementById('formaEventos');
+  const conEvento = listaCiclosOrdenados().filter((c) => c.config.eventoNombre && c.config.eventoFecha);
+  if (conEvento.length) {
+    eventosEl.style.display = 'block';
+    eventosEl.innerHTML = conEvento.map((c) => {
+      const p = mapaPuntos[c.config.eventoFecha];
+      if (!p) return '';
+      const tsb = Math.round(p.tsb);
+      let estadoTxt, color;
+      if (tsb >= 5 && tsb <= 25) { estadoTxt = '✅ zona óptima'; color = '#5fb88a'; }
+      else if (tsb > 25) { estadoTxt = '⚠️ capaz demasiado descansado'; color = '#e0a458'; }
+      else if (tsb < -10) { estadoTxt = '⚠️ todavía cargado'; color = '#d9705a'; }
+      else { estadoTxt = 'cerca, sin llegar del todo'; color = '#8ea3b3'; }
+      return '<div class="sesionCard" style="margin-bottom:6px">' +
+        '<div class="nombre">🏁 ' + c.config.eventoNombre + ' · ' + c.config.eventoFecha + '</div>' +
+        '<div class="estructura" style="color:' + color + '">TSB proyectado ' + tsb + ' · ' + estadoTxt + '</div>' +
+        '</div>';
+    }).join('');
+  } else {
+    eventosEl.style.display = 'none';
+    eventosEl.innerHTML = '';
+  }
+
+  const avisoEl = document.getElementById('formaAviso');
+  if (tsbMinPt.tsb < -30) {
+    avisoEl.style.display = 'block';
+    avisoEl.textContent = '⚠️ El TSB proyectado baja de -30 el ' + tsbMinPt.fecha + ' (' + Math.round(tsbMinPt.tsb) + ') — zona de riesgo de sobrecarga según las bandas de Coggan/TrainingPeaks. Capaz conviene bajar volumen o meter un día de descanso esa semana.';
+  } else {
+    avisoEl.style.display = 'none';
+  }
+
   leyenda.innerHTML =
     '<span><span class="dot" style="background:#5aa9d6"></span>CTL · aptitud</span>' +
     '<span><span class="dot" style="background:#d9705a"></span>ATL · fatiga</span>' +
@@ -1619,6 +1658,18 @@ function dibujarGraficoForma(puntos, idxHoy) {
   const yAt = (v) => padT + (1 - (v - minV) / rango) * plotH;
 
   let html = '';
+
+  // bandas de referencia TSB (Coggan/TrainingPeaks): rojo = riesgo de sobrecarga,
+  // verde = zona óptima pre-competencia. Son bandas empíricas, no un cálculo exacto.
+  function bandaTsb(desde, hasta, color) {
+    const yDesde = yAt(Math.min(maxV, Math.max(minV, hasta)));
+    const yHasta = yAt(Math.min(maxV, Math.max(minV, desde)));
+    if (yHasta <= yDesde) return '';
+    return '<rect x="' + padL + '" y="' + yDesde.toFixed(1) + '" width="' + (W - padL) + '" height="' + (yHasta - yDesde).toFixed(1) + '" fill="' + color + '" opacity="0.08"></rect>';
+  }
+  html += bandaTsb(-1000, -30, '#d9705a');
+  html += bandaTsb(5, 25, '#5fb88a');
+
   if (minV < 0) {
     const y0 = yAt(0);
     html += '<line x1="' + padL + '" y1="' + y0.toFixed(1) + '" x2="' + W + '" y2="' + y0.toFixed(1) + '" stroke="#8ea3b3" stroke-width="1" stroke-dasharray="3,3"></line>';
