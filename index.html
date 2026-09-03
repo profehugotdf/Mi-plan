@@ -409,6 +409,8 @@
       <div id="formaWrap" class="graficoWrap" style="display:none">
         <svg id="formaSvg"></svg>
       </div>
+      <div class="hint" id="formaCursorInfo" style="margin-top:6px;font-family:var(--mono)"></div>
+      <p class="hint" style="margin-top:2px">Tocá y arrastrá sobre el gráfico para ver el detalle de cualquier día, pasado o futuro.</p>
       <div class="statGrid" id="formaStats" style="margin-top:10px"></div>
       <div id="formaEventos" style="margin-top:8px;display:none"></div>
       <p class="hint" id="formaAviso" style="margin-top:8px;color:var(--warn);display:none"></p>
@@ -1705,7 +1707,57 @@ function dibujarGraficoForma(puntos, idxHoy) {
     }
   });
 
+  // cursor arrastrable — arranca en "hoy", el usuario lo desliza para explorar cualquier día
+  html += '<line id="cursorLinea" x1="' + xHoy.toFixed(1) + '" y1="' + padT + '" x2="' + xHoy.toFixed(1) + '" y2="' + (padT + plotH) + '" stroke="#e7edf2" stroke-width="1.5"></line>';
+  html += '<circle id="cursorCtl" cx="' + xHoy.toFixed(1) + '" cy="0" r="3.5" fill="#5aa9d6" stroke="#0f1720" stroke-width="1"></circle>';
+  html += '<circle id="cursorAtl" cx="' + xHoy.toFixed(1) + '" cy="0" r="3.5" fill="#d9705a" stroke="#0f1720" stroke-width="1"></circle>';
+  html += '<circle id="cursorTsb" cx="' + xHoy.toFixed(1) + '" cy="0" r="3.5" fill="#e0a458" stroke="#0f1720" stroke-width="1"></circle>';
+  // rect invisible que cubre todo el gráfico: agranda el área táctil para arrastrar desde cualquier punto
+  html += '<rect x="' + padL + '" y="0" width="' + (W - padL) + '" height="' + H + '" fill="transparent"></rect>';
+
   svg.innerHTML = html;
+
+  const cursorLinea = document.getElementById('cursorLinea');
+  const cursorCtl = document.getElementById('cursorCtl');
+  const cursorAtl = document.getElementById('cursorAtl');
+  const cursorTsb = document.getElementById('cursorTsb');
+  const infoEl = document.getElementById('formaCursorInfo');
+
+  function actualizarCursor(idx) {
+    idx = Math.max(0, Math.min(puntos.length - 1, idx));
+    const p = puntos[idx];
+    const x = xAt(idx);
+    cursorLinea.setAttribute('x1', x); cursorLinea.setAttribute('x2', x);
+    cursorCtl.setAttribute('cx', x); cursorCtl.setAttribute('cy', yAt(p.ctl).toFixed(1));
+    cursorAtl.setAttribute('cx', x); cursorAtl.setAttribute('cy', yAt(p.atl).toFixed(1));
+    cursorTsb.setAttribute('cx', x); cursorTsb.setAttribute('cy', yAt(p.tsb).toFixed(1));
+    const etiqueta = idx === idxHoy ? ' · hoy' : (idx > idxHoy ? ' · proyectado' : ' · real');
+    infoEl.innerHTML = '<b>' + p.fecha + '</b>' + etiqueta + ' — CTL ' + Math.round(p.ctl) + ' · ATL ' + Math.round(p.atl) + ' · TSB ' + Math.round(p.tsb);
+  }
+
+  function posicionAIndice(clientX) {
+    const rect = svg.getBoundingClientRect();
+    const escala = rect.width / W;
+    const xLocal = (clientX - rect.left) / escala;
+    return Math.round((xLocal - padL) / pxPorDia);
+  }
+
+  function moverCursor(e) {
+    actualizarCursor(posicionAIndice(e.clientX));
+  }
+  function terminarDrag(e) {
+    svg.removeEventListener('pointermove', moverCursor);
+    try { svg.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  svg.onpointerdown = function (e) {
+    svg.setPointerCapture(e.pointerId);
+    moverCursor(e);
+    svg.addEventListener('pointermove', moverCursor);
+    svg.addEventListener('pointerup', terminarDrag);
+    svg.addEventListener('pointercancel', terminarDrag);
+  };
+
+  actualizarCursor(idxHoy);
 }
 
 /* ========================= HEADER ========================= */
