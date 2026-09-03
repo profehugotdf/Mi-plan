@@ -467,6 +467,21 @@
     </div>
 
     <div class="card">
+      <h3>Importar actividades de Garmin</h3>
+      <p style="margin-bottom:10px">Subí uno o varios archivos <span class="mono">.fit</span> exportados de Garmin Connect (carrera, bici, kayak — para fuerza usá la app Fuerza, que tiene su propio importador). Revisás antes de confirmar.</p>
+      <input type="file" id="fitFiles" accept=".fit" multiple style="margin-bottom:10px">
+      <div class="btnRow">
+        <button class="primary" id="btnProcesarFit">Procesar archivos</button>
+      </div>
+      <div id="fitPreview" style="margin-top:12px"></div>
+      <div class="btnRow" id="fitConfirmarRow" style="display:none;margin-top:10px">
+        <button class="primary" style="width:100%" id="btnConfirmarFit">Confirmar e importar</button>
+      </div>
+      <p class="hint" id="fitResultado" style="margin-top:8px"></p>
+      <p class="hint" style="margin-top:6px">No trae archivos .zip todavía, solo .fit sueltos — en Garmin Connect exportá "Original" actividad por actividad, o descomprimí el zip del historial completo antes de subir.</p>
+    </div>
+
+    <div class="card">
       <h3>Backup</h3>
       <p style="margin-bottom:10px">Exportá todo (ciclos + ajustes de carga por día) a un archivo, o restaurá desde uno.</p>
       <div class="btnRow">
@@ -1759,6 +1774,208 @@ function dibujarGraficoForma(puntos, idxHoy) {
 
   actualizarCursor(idxHoy);
 }
+
+/* ========================= IMPORTADOR DE ACTIVIDADES GARMIN (.fit) ========================= */
+
+const FIT_EPOCH_MS = Date.UTC(1989, 11, 31, 0, 0, 0); // época de FIT: 31/12/1989 UTC
+const MAPA_SPORT_FIT = { 1: 'carrera', 2: 'bici', 5: 'natacion', 15: 'kayak', 19: 'kayak' };
+
+function leerCampoFit(dv, offset, size, baseType, littleEndian) {
+  const signed = baseType === 1 || baseType === 131 || baseType === 133; // sint8 / sint16 / sint32
+  if (size === 1) return signed ? dv.getInt8(offset) : dv.getUint8(offset);
+  if (size === 2) return signed ? dv.getInt16(offset, littleEndian) : dv.getUint16(offset, littleEndian);
+  if (size === 4) return signed ? dv.getInt32(offset, littleEndian) : dv.getUint32(offset, littleEndian);
+  return null; // strings u otros tamaños: no los necesitamos para el mensaje "session"
+}
+
+// Recorre el archivo .fit y devuelve los campos crudos de cada mensaje "session" (global mesg num 18)
+// — es el mensaje resumen de una actividad completa: fecha, duración, distancia, promedios.
+// No procesamos "record" (muestra por muestra) porque no lo necesitamos para el TSS.
+function parsearSesionesFit(buffer) {
+  const dv = new DataView(buffer);
+  const headerSize = dv.getUint8(0);
+  const dataSize = dv.getUint32(4, true);
+  const finDatos = headerSize + dataSize;
+  let offset = headerSize;
+  const definiciones = {};
+  const sesiones = [];
+
+  while (offset < finDatos) {
+    const recordHeader = dv.getUint8(offset); offset += 1;
+
+    if (recordHeader & 0x80) {
+      // header de timestamp comprimido (usado típicamente en mensajes "record" de alta frecuencia).
+      // Es un mensaje de DATOS para un localType de 2 bits — hay que saltar su payload para no desalinear la lectura.
+      const localType = (recordHeader >> 5) & 0x03;
+      const def = definiciones[localType];
+      if (!def) break;
+      offset += def.mesgLength;
+      continue;
+    }
+
+    const esDefinicion = (recordHeader & 0x40) !== 0;
+    const localType = recordHeader & 0x0F;
+
+    if (esDefinicion) {
+      offset += 1; // reservado
+      const littleEndian = dv.getUint8(offset) === 0; offset += 1;
+      const globalMesgNum = dv.getUint16(offset, littleEndian); offset += 2;
+      const numFields = dv.getUint8(offset); offset += 1;
+      const fields = [];
+      let mesgLength = 0;
+      for (let i = 0; i < numFields; i++) {
+        const defNum = dv.getUint8(offset); offset += 1;
+        const size = dv.getUint8(offset); offset += 1;
+        const baseType = dv.getUint8(offset); offset += 1;
+        fields.push({ defNum, size, baseType });
+        mesgLength += size;
+      }
+      definiciones[localType] = { globalMesgNum, fields, littleEndian, mesgLength };
+    } else {
+      const def = definiciones[localType];
+      if (!def) break;
+      if (def.globalMesgNum === 18) {
+        const valores = {};
+        let sub = offset;
+        def.fields.forEach((f) => {
+          valores[f.defNum] = leerCampoFit(dv, sub, f.size, f.baseType, def.littleEndian);
+          sub += f.size;
+        });
+        sesiones.push(valores);
+      }
+      offset += def.mesgLength;
+    }
+  }
+  return sesiones;
+}
+
+// Números de campo del mensaje "session" en el SDK de FIT: 2=start_time, 5=sport, 7=total_elapsed_time,
+// 8=total_timer_time, 9=total_distance, 14=avg_speed, 16=avg_heart_rate, 20=avg_power.
+function construirResumenSesionFit(campos, nombreArchivo) {
+  const startTimeRaw = campos[2];
+  const fechaMs = startTimeRaw != null ? FIT_EPOCH_MS + startTimeRaw * 1000 : null;
+  const totalTimerRaw = campos[8] != null ? campos[8] : campos[7];
+  return {
+    idFuente: startTimeRaw,
+    fecha: fechaMs ? new Date(fechaMs).toISOString().slice(0, 10) : null,
+    disciplinaSugerida: MAPA_SPORT_FIT[campos[5]] || null,
+    sportCrudo: campos[5],
+    duracionSeg: totalTimerRaw != null ? totalTimerRaw / 1000 : null,
+    distM: campos[9] != null ? campos[9] / 100 : null,
+    avgHr: campos[16] != null ? campos[16] : null,
+    avgSpeedMs: campos[14] != null ? campos[14] / 1000 : null,
+    avgPower: campos[20] != null ? campos[20] : null,
+    archivo: nombreArchivo,
+  };
+}
+
+// TSS estimado con la misma lógica de las apps hermanas: potencia si hay FTP cargado (bici),
+// ritmo si hay umbral de ritmo (carrera), pulso como último recurso (kayak, o carrera sin ritmo).
+function calcularTssImportado(resumen, disciplina) {
+  if (!resumen.duracionSeg) return null;
+  const horas = resumen.duracionSeg / 3600;
+  const u = leerUmbrales();
+  if (disciplina === 'bici' && resumen.avgPower && u.ftpBici) {
+    const ifactor = resumen.avgPower / u.ftpBici;
+    return Math.round(100 * horas * ifactor * ifactor);
+  }
+  if (disciplina === 'carrera' && resumen.avgSpeedMs && u.ritmoUmbralCarreraSegKm) {
+    const ritmoSesionSegKm = 1000 / resumen.avgSpeedMs;
+    const ifactor = u.ritmoUmbralCarreraSegKm / ritmoSesionSegKm;
+    return Math.round(100 * horas * ifactor * ifactor);
+  }
+  const umbralPulso = disciplina === 'kayak' ? u.pulsoUmbralKayak : u.pulsoUmbralCarrera;
+  if (resumen.avgHr && umbralPulso) {
+    const ifactor = resumen.avgHr / umbralPulso;
+    return Math.round(100 * horas * ifactor * ifactor);
+  }
+  return null;
+}
+
+let sesionesFitPendientes = [];
+
+document.getElementById('btnProcesarFit').addEventListener('click', async () => {
+  const input = document.getElementById('fitFiles');
+  const archivos = Array.from(input.files || []);
+  if (!archivos.length) { toast('Elegí al menos un archivo .fit'); return; }
+
+  sesionesFitPendientes = [];
+  for (const archivo of archivos) {
+    try {
+      const buffer = await archivo.arrayBuffer();
+      const crudas = parsearSesionesFit(buffer);
+      crudas.forEach((campos) => {
+        const resumen = construirResumenSesionFit(campos, archivo.name);
+        if (resumen.idFuente != null && resumen.fecha) sesionesFitPendientes.push(resumen);
+      });
+    } catch (e) {
+      console.error('Error procesando ' + archivo.name, e);
+    }
+  }
+  renderPreviewFit();
+});
+
+function renderPreviewFit() {
+  const cont = document.getElementById('fitPreview');
+  const confirmarRow = document.getElementById('fitConfirmarRow');
+  if (!sesionesFitPendientes.length) {
+    cont.innerHTML = '<p>No se encontraron sesiones en esos archivos.</p>';
+    confirmarRow.style.display = 'none';
+    return;
+  }
+  cont.innerHTML = sesionesFitPendientes.map((s, i) => {
+    const disciplina = s.disciplinaEditada || s.disciplinaSugerida;
+    const tssPreview = calcularTssImportado(s, disciplina);
+    const opciones = '<option value="">sin disciplina</option>' + DISCIPLINAS.map((d) =>
+      '<option value="' + d.key + '"' + (disciplina === d.key ? ' selected' : '') + '>' + d.label + '</option>'
+    ).join('');
+    return '<div class="sesionCard" style="margin-bottom:8px">' +
+      '<div class="nombre">' + s.fecha + ' · ' + s.archivo + '</div>' +
+      '<div class="estructura" style="font-size:0.8rem">' + segARelojes(s.duracionSeg || 0) +
+        (s.distM ? ' · ' + (s.distM / 1000).toFixed(2) + ' km' : '') +
+        (s.avgHr ? ' · ' + s.avgHr + ' lpm' : '') +
+        (s.avgPower ? ' · ' + s.avgPower + 'W' : '') + '</div>' +
+      '<select data-i="' + i + '" class="fitDisciplina" style="margin-top:6px">' + opciones + '</select>' +
+      '<div class="totalizado" data-tss-i="' + i + '" style="margin-top:4px">TSS estimado: ' + (tssPreview != null ? tssPreview : 'no calculable (falta umbral en Datos)') + '</div>' +
+    '</div>';
+  }).join('');
+
+  cont.querySelectorAll('.fitDisciplina').forEach((sel) => {
+    sel.addEventListener('change', () => {
+      const i = parseInt(sel.dataset.i, 10);
+      sesionesFitPendientes[i].disciplinaEditada = sel.value || null;
+      const tss = calcularTssImportado(sesionesFitPendientes[i], sesionesFitPendientes[i].disciplinaEditada);
+      cont.querySelector('[data-tss-i="' + i + '"]').textContent = 'TSS estimado: ' + (tss != null ? tss : 'no calculable (falta umbral en Datos)');
+    });
+  });
+
+  confirmarRow.style.display = 'block';
+}
+
+document.getElementById('btnConfirmarFit').addEventListener('click', () => {
+  const registro = leerRegistroForma();
+  let importadas = 0, sinDisciplina = 0, sinTss = 0;
+  sesionesFitPendientes.forEach((s) => {
+    const disciplina = s.disciplinaEditada || s.disciplinaSugerida;
+    if (!disciplina) { sinDisciplina++; return; }
+    const tss = calcularTssImportado(s, disciplina);
+    if (tss == null) { sinTss++; return; }
+    const id = 'garmin_' + s.idFuente;
+    const idx = registro.findIndex((r) => r.id === id);
+    const entrada = { fecha: s.fecha, deporte: disciplina, tss, id };
+    if (idx !== -1) registro[idx] = entrada; else registro.push(entrada);
+    importadas++;
+  });
+  localStorage.setItem(LS_REGISTRO_FORMA, JSON.stringify(registro));
+  const avisos = [];
+  if (sinDisciplina) avisos.push(sinDisciplina + ' sin disciplina asignada');
+  if (sinTss) avisos.push(sinTss + ' sin TSS calculable (revisá Umbrales en Datos)');
+  document.getElementById('fitResultado').textContent = 'Importadas ' + importadas + ' sesiones.' + (avisos.length ? ' Quedaron afuera: ' + avisos.join(', ') + '.' : '');
+  sesionesFitPendientes = [];
+  document.getElementById('fitPreview').innerHTML = '';
+  document.getElementById('fitConfirmarRow').style.display = 'none';
+  document.getElementById('fitFiles').value = '';
+});
 
 /* ========================= HEADER ========================= */
 
