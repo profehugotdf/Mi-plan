@@ -54,6 +54,19 @@
   .tab{flex:1;text-align:center;padding:9px 6px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.8rem;font-weight:600;cursor:pointer;user-select:none;}
   .tab.active{background:var(--accent);color:#1a1206;border-color:var(--accent);}
 
+  .vistaTab{flex:1;text-align:center;padding:9px 6px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.8rem;font-weight:600;cursor:pointer;user-select:none;}
+  .vistaTab.active{background:var(--accent);color:#1a1206;border-color:var(--accent);}
+
+  .semScroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--line);}
+  .semGrid{position:relative;display:grid;grid-template-columns:34px repeat(7,minmax(64px,1fr));min-width:490px;}
+  .semHoraLabel{font-size:0.6rem;color:var(--text-dim);text-align:right;padding:0 4px;height:32px;box-sizing:border-box;border-top:1px solid var(--line);display:flex;align-items:flex-start;justify-content:flex-end;transform:translateY(-6px);}
+  .semDiaCab{font-size:0.65rem;text-align:center;padding:6px 0;background:var(--bg-panel-2);border-left:1px solid var(--line);font-weight:700;position:sticky;top:0;}
+  .semCelda{height:32px;box-sizing:border-box;border-top:1px solid var(--line);border-left:1px solid var(--line);}
+  .semCelda.hoyCol{background:rgba(224,164,88,0.06);}
+  .semBloque{position:absolute;border-radius:6px;padding:2px 5px;font-size:0.6rem;line-height:1.25;color:#0a0f14;font-weight:700;overflow:hidden;touch-action:none;cursor:grab;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .semBloque.arrastrando{opacity:0.85;z-index:20;box-shadow:0 6px 14px rgba(0,0,0,.5);cursor:grabbing;}
+  .semBloque .hora{opacity:0.75;font-weight:400;}
+
   .panel{display:none;}
   .panel.active{display:block;}
 
@@ -149,6 +162,9 @@
   .diasRow-btns{display:flex;gap:4px;}
   .diaChip{width:27px;height:27px;border-radius:50%;background:var(--bg-panel-2);border:1px solid var(--line);color:var(--text-dim);font-size:0.68rem;font-weight:700;cursor:pointer;padding:0;}
   .diaChip.on{color:#0a0f14;border-color:transparent;}
+  .horasRow{display:flex;flex-wrap:wrap;gap:8px;margin:-2px 0 10px;}
+  .horaChip{display:flex;align-items:center;gap:4px;font-size:0.68rem;color:var(--text-dim);}
+  .horaChip input[type=time]{width:auto;padding:3px 5px;font-size:0.72rem;border-radius:6px;}
 
   .calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
   .diaCab{text-align:center;font-size:0.62rem;color:var(--text-dim);padding:2px 0 6px;}
@@ -245,21 +261,45 @@
 
   <!-- CALENDARIO -->
   <section class="panel" id="panel-calendario">
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <button class="small" id="calPrev">‹</button>
-        <h3 id="calTitulo">Mes</h3>
-        <button class="small" id="calNext">›</button>
-      </div>
-      <div class="calGrid" id="calGridHead"></div>
-      <div class="calGrid" id="calGridBody" style="margin-top:3px"></div>
-      <div class="zoneLegend" style="margin-top:10px">
-        <span><span class="dot" style="background:#8ea3b3"></span>real (entrenado)</span>
-        <span><span class="dot" style="background:transparent;border:1px solid #8ea3b3"></span>planeado</span>
-      </div>
-      <p class="hint" style="margin-top:6px">Tocá un día para ver el detalle. Lo planeado depende de los días de la semana que le asignaste a cada disciplina, en Ciclo.</p>
+    <div class="tabs" style="margin:0 0 10px;padding:0">
+      <div class="vistaTab active" data-vista="mes">Mes</div>
+      <div class="vistaTab" data-vista="semana">Semana</div>
     </div>
-    <div class="card" id="calDetalle" style="display:none"></div>
+
+    <div id="calVistaMes">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <button class="small" id="calPrev">‹</button>
+          <h3 id="calTitulo">Mes</h3>
+          <button class="small" id="calNext">›</button>
+        </div>
+        <div class="calGrid" id="calGridHead"></div>
+        <div class="calGrid" id="calGridBody" style="margin-top:3px"></div>
+        <div class="zoneLegend" style="margin-top:10px">
+          <span><span class="dot" style="background:#8ea3b3"></span>real (entrenado)</span>
+          <span><span class="dot" style="background:transparent;border:1px solid #8ea3b3"></span>planeado</span>
+        </div>
+        <p class="hint" style="margin-top:6px">Tocá un día para ver el detalle. Lo planeado depende de los días de la semana que le asignaste a cada disciplina, en Ciclo.</p>
+      </div>
+      <div class="card" id="calDetalle" style="display:none"></div>
+    </div>
+
+    <div id="calVistaSemana" style="display:none">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <button class="small" id="semPrev">‹</button>
+          <h3 id="semTitulo">Semana</h3>
+          <button class="small" id="semNext">›</button>
+        </div>
+        <p class="hint" style="margin-bottom:8px">Tocá y arrastrá un bloque para moverlo de día u horario — el cambio queda guardado solo para esta semana puntual, no toca el horario base del ciclo.</p>
+        <div class="semScroll">
+          <div class="semGrid" id="semGrid"></div>
+        </div>
+        <div class="btnRow" style="margin-top:8px">
+          <button class="small" id="semDeshacer">Deshacer ajustes de esta semana</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- CICLO -->
@@ -764,11 +804,11 @@ function configDefault() {
     eventoNombre: '', eventoFecha: '',
     patronCargaSemanal: [85, 90, 95, 100],
     disciplinas: {
-      natacion: { pctInicio: 20, pctFin: 20, sesionesInicio: 2, sesionesFin: 3, diasSemana: [] },
-      bici: { pctInicio: 25, pctFin: 25, sesionesInicio: 2, sesionesFin: 3, diasSemana: [] },
-      carrera: { pctInicio: 25, pctFin: 25, sesionesInicio: 2, sesionesFin: 3, diasSemana: [] },
-      fuerza: { pctInicio: 15, pctFin: 10, sesionesInicio: 2, sesionesFin: 2, diasSemana: [] },
-      kayak: { pctInicio: 15, pctFin: 20, sesionesInicio: 1, sesionesFin: 2, diasSemana: [] },
+      natacion: { pctInicio: 20, pctFin: 20, sesionesInicio: 2, sesionesFin: 3, horario: [] },
+      bici: { pctInicio: 25, pctFin: 25, sesionesInicio: 2, sesionesFin: 3, horario: [] },
+      carrera: { pctInicio: 25, pctFin: 25, sesionesInicio: 2, sesionesFin: 3, horario: [] },
+      fuerza: { pctInicio: 15, pctFin: 10, sesionesInicio: 2, sesionesFin: 2, horario: [] },
+      kayak: { pctInicio: 15, pctFin: 20, sesionesInicio: 1, sesionesFin: 2, horario: [] },
     },
     zonas: {
       potFosf: { trabajo: { inicio: 5, fin: 10 }, recuperacion: { inicio: 60, fin: 90 }, series: { inicio: 4, fin: 8 } },
@@ -795,7 +835,12 @@ function migrarCiclo(config) {
   if (!config.taper) config.taper = { dias: 0, reduccionPct: 0 };
   if (config.disciplinas) {
     Object.keys(config.disciplinas).forEach((k) => {
-      if (!config.disciplinas[k].diasSemana) config.disciplinas[k].diasSemana = [];
+      if (!config.disciplinas[k].horario) {
+        // migración desde el diasSemana viejo (solo día, sin horario) — hora por defecto 18:00
+        const diasViejos = config.disciplinas[k].diasSemana || [];
+        config.disciplinas[k].horario = diasViejos.map((dia) => ({ dia, hora: '18:00' }));
+      }
+      delete config.disciplinas[k].diasSemana;
     });
   }
   if (!config.zonas) return config;
@@ -1211,26 +1256,43 @@ function renderDiasSemana() {
   const nombresDias = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   DISCIPLINAS.forEach((d) => {
     const cfg = cicloEnEdicion.disciplinas[d.key];
-    if (!cfg.diasSemana) cfg.diasSemana = [];
-    const row = document.createElement('div');
-    row.className = 'diasRow';
+    if (!cfg.horario) cfg.horario = [];
+    const wrap = document.createElement('div');
+    wrap.className = 'diasRow';
     let btns = '';
     for (let i = 0; i < 7; i++) {
-      const activo = cfg.diasSemana.indexOf(i) !== -1;
+      const activo = cfg.horario.some((h) => h.dia === i);
       btns += '<button type="button" class="diaChip' + (activo ? ' on' : '') + '" data-i="' + i + '" style="' + (activo ? ('background:' + d.color) : '') + '">' + nombresDias[i] + '</button>';
     }
-    row.innerHTML =
+    wrap.innerHTML =
       '<span class="diasRow-label"><span class="dot" style="background:' + d.color + '"></span>' + d.label + '</span>' +
       '<span class="diasRow-btns">' + btns + '</span>';
-    row.querySelectorAll('.diaChip').forEach((btn) => {
+    wrap.querySelectorAll('.diaChip').forEach((btn) => {
       btn.addEventListener('click', () => {
         const i = parseInt(btn.dataset.i, 10);
-        const idx = cfg.diasSemana.indexOf(i);
-        if (idx !== -1) cfg.diasSemana.splice(idx, 1); else cfg.diasSemana.push(i);
+        const idx = cfg.horario.findIndex((h) => h.dia === i);
+        if (idx !== -1) cfg.horario.splice(idx, 1);
+        else cfg.horario.push({ dia: i, hora: '18:00' });
         renderDiasSemana();
       });
     });
-    cont.appendChild(row);
+    cont.appendChild(wrap);
+
+    if (cfg.horario.length) {
+      const horasWrap = document.createElement('div');
+      horasWrap.className = 'horasRow';
+      horasWrap.innerHTML = cfg.horario.slice().sort((a, b) => a.dia - b.dia).map((h) =>
+        '<span class="horaChip">' + nombresDias[h.dia] + ' <input type="time" data-dia="' + h.dia + '" value="' + h.hora + '"></span>'
+      ).join('');
+      horasWrap.querySelectorAll('input[type=time]').forEach((inp) => {
+        inp.addEventListener('change', () => {
+          const dia = parseInt(inp.dataset.dia, 10);
+          const item = cfg.horario.find((h) => h.dia === dia);
+          if (item) item.hora = inp.value;
+        });
+      });
+      cont.appendChild(horasWrap);
+    }
   });
 }
 
@@ -1336,8 +1398,8 @@ function renderCalendario() {
       if (encontrado) {
         const diaSemana = d.getDay();
         DISCIPLINAS.forEach((disc) => {
-          const dias = encontrado.config.disciplinas[disc.key].diasSemana || [];
-          if (dias.indexOf(diaSemana) !== -1) {
+          const horario = encontrado.config.disciplinas[disc.key].horario || [];
+          if (horario.some((h) => h.dia === diaSemana)) {
             dotsHtml += '<span class="plan" style="color:' + COLOR_DISCIPLINA[disc.key] + '"></span>';
           }
         });
@@ -1372,14 +1434,15 @@ function mostrarDetalleDia(iso, real) {
     const configConOverrides = Object.assign({}, config, { cargaOverrides: overridesCiclo });
     const diaSemana = new Date(iso + 'T00:00:00').getDay();
     const r = calcularDia(configConOverrides, iso);
-    const planeadas = DISCIPLINAS.filter((d) => (config.disciplinas[d.key].diasSemana || []).indexOf(diaSemana) !== -1);
+    const planeadas = DISCIPLINAS.filter((d) => (config.disciplinas[d.key].horario || []).some((h) => h.dia === diaSemana));
     if (planeadas.length) {
       html += '<p style="margin:8px 0 6px">' + (iso > hoy ? 'Planeado' : 'Plan de ese día') + ' — ' + config.nombre + ':</p>';
       planeadas.forEach((d) => {
         const dd = r.disciplinas[d.key];
+        const hEntry = (config.disciplinas[d.key].horario || []).find((h) => h.dia === diaSemana);
         html +=
           '<div class="discCard" style="margin-bottom:6px">' +
-            '<div class="info"><div class="name"><span class="dot" style="background:' + d.color + '"></span>' + d.label + '</div>' +
+            '<div class="info"><div class="name"><span class="dot" style="background:' + d.color + '"></span>' + d.label + (hEntry ? ' · ' + hEntry.hora : '') + '</div>' +
             '<div class="sub">semana ' + r.semanaIndex + ' · ' + r.pctCarga + '% carga</div></div>' +
             '<div class="time">' + segARelojes(dd.tiempoSesionSeg) + '</div>' +
           '</div>';
@@ -1401,6 +1464,189 @@ document.getElementById('calPrev').addEventListener('click', () => {
 document.getElementById('calNext').addEventListener('click', () => {
   calMesActual.setMonth(calMesActual.getMonth() + 1);
   renderCalendario();
+});
+
+/* ========================= VISTA SEMANAL (arrastrar y soltar) ========================= */
+
+const LS_SEM_OVERRIDES = 'plan_semana_overrides_v1';
+const HORA_INICIO_GRID = 5, HORA_FIN_GRID = 23, PX_POR_HORA = 40, COL_HORA_PX = 34;
+
+function leerOverridesSemana() {
+  try { return JSON.parse(localStorage.getItem(LS_SEM_OVERRIDES)) || {}; } catch (e) { return {}; }
+}
+function guardarOverridesSemana(o) {
+  localStorage.setItem(LS_SEM_OVERRIDES, JSON.stringify(o));
+}
+
+let semanaActual = new Date(hoyISO() + 'T00:00:00');
+semanaActual.setDate(semanaActual.getDate() - semanaActual.getDay()); // arranca el domingo de esta semana
+
+function horaAMinutos(horaStr) {
+  const partes = (horaStr || '00:00').split(':').map(Number);
+  return partes[0] * 60 + (partes[1] || 0);
+}
+function minutosAHora(mins) {
+  mins = Math.max(HORA_INICIO_GRID * 60, Math.min(HORA_FIN_GRID * 60 - 1, mins));
+  let h = Math.floor(mins / 60);
+  let m = Math.round((mins % 60) / 15) * 15;
+  if (m === 60) { m = 0; h += 1; }
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+// Junta, para la semana visible, una entrada por cada ocurrencia planeada (día × disciplina),
+// aplicando el ajuste puntual de esa semana si existe (sin tocar el horario base del ciclo).
+function construirBloquesSemana() {
+  const domingo = new Date(semanaActual);
+  const weekStartISO = domingo.toISOString().slice(0, 10);
+  const overridesTodos = leerOverridesSemana();
+  const bloques = [];
+
+  for (let dia = 0; dia < 7; dia++) {
+    const fecha = new Date(domingo); fecha.setDate(fecha.getDate() + dia);
+    const iso = fecha.toISOString().slice(0, 10);
+    const encontrado = cicloParaFecha(iso);
+    if (!encontrado) continue;
+    const config = encontrado.config;
+    const overridesCiclo = overridesAll[encontrado.id] || {};
+    const configConOverrides = Object.assign({}, config, { cargaOverrides: overridesCiclo });
+    const r = calcularDia(configConOverrides, iso);
+    if (r.fueraDeRango) continue;
+
+    DISCIPLINAS.forEach((d) => {
+      (config.disciplinas[d.key].horario || []).filter((h) => h.dia === dia).forEach((entrada) => {
+        const keyOverride = d.key + '#' + dia;
+        const overrideSemana = overridesTodos[encontrado.id] && overridesTodos[encontrado.id][weekStartISO]
+          ? overridesTodos[encontrado.id][weekStartISO][keyOverride] : null;
+        bloques.push({
+          discKey: d.key, label: d.label, color: d.color,
+          cicloId: encontrado.id, weekStartISO,
+          diaOriginal: dia, horaOriginal: entrada.hora,
+          diaActual: overrideSemana ? overrideSemana.dia : dia,
+          horaActual: overrideSemana ? overrideSemana.hora : entrada.hora,
+          duracionSeg: r.disciplinas[d.key].tiempoSesionSeg,
+        });
+      });
+    });
+  }
+  return bloques;
+}
+
+function guardarAjusteSemana(bloque, diaNuevo, horaNueva) {
+  const overridesTodos = leerOverridesSemana();
+  if (!overridesTodos[bloque.cicloId]) overridesTodos[bloque.cicloId] = {};
+  if (!overridesTodos[bloque.cicloId][bloque.weekStartISO]) overridesTodos[bloque.cicloId][bloque.weekStartISO] = {};
+  overridesTodos[bloque.cicloId][bloque.weekStartISO][bloque.discKey + '#' + bloque.diaOriginal] = { dia: diaNuevo, hora: horaNueva };
+  guardarOverridesSemana(overridesTodos);
+}
+
+function renderSemana() {
+  const domingo = new Date(semanaActual);
+  const fin = new Date(domingo); fin.setDate(fin.getDate() + 6);
+  document.getElementById('semTitulo').textContent =
+    domingo.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) + ' – ' + fin.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+
+  const grid = document.getElementById('semGrid');
+  const nombresDias = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  const hoy = hoyISO();
+
+  let html = '<div class="semDiaCab"></div>';
+  for (let i = 0; i < 7; i++) {
+    const f = new Date(domingo); f.setDate(f.getDate() + i);
+    const iso = f.toISOString().slice(0, 10);
+    html += '<div class="semDiaCab"' + (iso === hoy ? ' style="color:var(--accent)"' : '') + '>' + nombresDias[i] + ' ' + f.getDate() + '</div>';
+  }
+  for (let h = HORA_INICIO_GRID; h < HORA_FIN_GRID; h++) {
+    html += '<div class="semHoraLabel">' + h + ':00</div>';
+    for (let d = 0; d < 7; d++) {
+      const f = new Date(domingo); f.setDate(f.getDate() + d);
+      const esHoyCol = f.toISOString().slice(0, 10) === hoy;
+      html += '<div class="semCelda' + (esHoyCol ? ' hoyCol' : '') + '"></div>';
+    }
+  }
+  grid.innerHTML = html;
+
+  const gridRect = grid.getBoundingClientRect();
+  const colDiaPx = (gridRect.width - COL_HORA_PX) / 7;
+  const cabeceraPx = grid.querySelector('.semDiaCab').getBoundingClientRect().height || 28;
+
+  construirBloquesSemana().forEach((b) => {
+    const minInicio = horaAMinutos(b.horaActual);
+    const top = cabeceraPx + ((minInicio / 60) - HORA_INICIO_GRID) * PX_POR_HORA;
+    const alturaPx = Math.max(16, (b.duracionSeg / 3600) * PX_POR_HORA);
+    const left = COL_HORA_PX + b.diaActual * colDiaPx;
+
+    const el = document.createElement('div');
+    el.className = 'semBloque';
+    el.style.top = top.toFixed(1) + 'px';
+    el.style.left = (left + 1).toFixed(1) + 'px';
+    el.style.width = (colDiaPx - 2).toFixed(1) + 'px';
+    el.style.height = alturaPx.toFixed(1) + 'px';
+    el.style.background = b.color;
+    el.innerHTML = b.label + '<div class="hora">' + b.horaActual + '</div>';
+    grid.appendChild(el);
+    activarDragBloque(el, b, colDiaPx, cabeceraPx);
+  });
+}
+
+function activarDragBloque(el, bloque, colDiaPx, cabeceraPx) {
+  let arrastrando = false, offsetX = 0, offsetY = 0;
+
+  el.addEventListener('pointerdown', (e) => {
+    el.setPointerCapture(e.pointerId);
+    arrastrando = true;
+    el.classList.add('arrastrando');
+    const rect = el.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+  });
+
+  el.addEventListener('pointermove', (e) => {
+    if (!arrastrando) return;
+    const gridRect = document.getElementById('semGrid').getBoundingClientRect();
+    el.style.left = (e.clientX - gridRect.left - offsetX).toFixed(1) + 'px';
+    el.style.top = (e.clientY - gridRect.top - offsetY).toFixed(1) + 'px';
+  });
+
+  function soltar() {
+    if (!arrastrando) return;
+    arrastrando = false;
+    el.classList.remove('arrastrando');
+    const xLocal = parseFloat(el.style.left);
+    const yLocal = parseFloat(el.style.top);
+    let diaNuevo = Math.round((xLocal - COL_HORA_PX) / colDiaPx);
+    diaNuevo = Math.max(0, Math.min(6, diaNuevo));
+    const minsNuevos = ((yLocal - cabeceraPx) / PX_POR_HORA) * 60 + HORA_INICIO_GRID * 60;
+    const horaNueva = minutosAHora(minsNuevos);
+    guardarAjusteSemana(bloque, diaNuevo, horaNueva);
+    renderSemana();
+  }
+  el.addEventListener('pointerup', soltar);
+  el.addEventListener('pointercancel', soltar);
+}
+
+document.querySelectorAll('.vistaTab').forEach((vt) => {
+  vt.addEventListener('click', () => {
+    document.querySelectorAll('.vistaTab').forEach((x) => x.classList.remove('active'));
+    vt.classList.add('active');
+    const modo = vt.dataset.vista;
+    document.getElementById('calVistaMes').style.display = modo === 'mes' ? 'block' : 'none';
+    document.getElementById('calVistaSemana').style.display = modo === 'semana' ? 'block' : 'none';
+    if (modo === 'semana') renderSemana();
+  });
+});
+
+document.getElementById('semPrev').addEventListener('click', () => { semanaActual.setDate(semanaActual.getDate() - 7); renderSemana(); });
+document.getElementById('semNext').addEventListener('click', () => { semanaActual.setDate(semanaActual.getDate() + 7); renderSemana(); });
+document.getElementById('semDeshacer').addEventListener('click', () => {
+  const weekStartISO = new Date(semanaActual).toISOString().slice(0, 10);
+  const overridesTodos = leerOverridesSemana();
+  let huboAlgo = false;
+  Object.keys(overridesTodos).forEach((cid) => {
+    if (overridesTodos[cid][weekStartISO]) { delete overridesTodos[cid][weekStartISO]; huboAlgo = true; }
+  });
+  guardarOverridesSemana(overridesTodos);
+  toast(huboAlgo ? 'Ajustes de esta semana deshechos' : 'No había ajustes esta semana');
+  renderSemana();
 });
 
 /* ========================= PANORAMA DE LA TEMPORADA ========================= */
