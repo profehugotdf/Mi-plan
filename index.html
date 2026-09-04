@@ -61,6 +61,7 @@
   .semGrid{position:relative;display:grid;grid-template-columns:34px repeat(7,minmax(64px,1fr));min-width:490px;}
   .semHoraLabel{font-size:0.6rem;color:var(--text-dim);text-align:right;padding:0 4px;height:32px;box-sizing:border-box;border-top:1px solid var(--line);display:flex;align-items:flex-start;justify-content:flex-end;transform:translateY(-6px);}
   .semDiaCab{font-size:0.65rem;text-align:center;padding:6px 0;background:var(--bg-panel-2);border-left:1px solid var(--line);font-weight:700;position:sticky;top:0;}
+  .colFija{position:sticky;left:0;z-index:6;background:var(--bg-panel);}
   .semCelda{height:32px;box-sizing:border-box;border-top:1px solid var(--line);border-left:1px solid var(--line);}
   .semCelda.hoyCol{background:rgba(224,164,88,0.06);}
   .semBloque{position:absolute;border-radius:6px;padding:2px 5px;font-size:0.6rem;line-height:1.25;color:#0a0f14;font-weight:700;overflow:hidden;touch-action:none;cursor:grab;box-shadow:0 1px 3px rgba(0,0,0,.3);}
@@ -1549,14 +1550,14 @@ function renderSemana() {
   const nombresDias = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   const hoy = hoyISO();
 
-  let html = '<div class="semDiaCab"></div>';
+  let html = '<div class="semDiaCab colFija"></div>';
   for (let i = 0; i < 7; i++) {
     const f = new Date(domingo); f.setDate(f.getDate() + i);
     const iso = f.toISOString().slice(0, 10);
     html += '<div class="semDiaCab"' + (iso === hoy ? ' style="color:var(--accent)"' : '') + '>' + nombresDias[i] + ' ' + f.getDate() + '</div>';
   }
   for (let h = HORA_INICIO_GRID; h < HORA_FIN_GRID; h++) {
-    html += '<div class="semHoraLabel">' + h + ':00</div>';
+    html += '<div class="semHoraLabel colFija">' + h + ':00</div>';
     for (let d = 0; d < 7; d++) {
       const f = new Date(domingo); f.setDate(f.getDate() + d);
       const esHoyCol = f.toISOString().slice(0, 10) === hoy;
