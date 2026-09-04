@@ -506,6 +506,7 @@
           <input type="number" id="uPulsoBici" min="0" step="1">
         </div>
       </div>
+      <button style="width:100%;margin-top:-2px;margin-bottom:10px" id="btnEstimarPulsoBici">Estimar pulso umbral de Bici del historial</button>
       <div class="field">
         <label>Ritmo umbral — Natación (min:seg / 100m)</label>
         <input type="text" id="uRitmoNatacion" placeholder="1:35">
@@ -1252,6 +1253,20 @@ function importarUmbralesDeApps() {
   }
 }
 document.getElementById('btnImportarUmbrales').addEventListener('click', importarUmbralesDeApps);
+
+// Estimación aproximada (no el algoritmo prolijo de mejor esfuerzo sostenido que tiene Kayak):
+// toma el promedio de pulso más alto entre tus sesiones de bici de 20' o más. Cruda pero útil
+// como punto de partida mientras no exista el cálculo real del lado de Bici Indoor.
+document.getElementById('btnEstimarPulsoBici').addEventListener('click', () => {
+  const sesiones = leerSesionesCrudas().filter((s) => s.deporte === 'bici' && s.duracionSeg >= 1200 && s.pulso);
+  if (!sesiones.length) {
+    toast('No encontré sesiones de bici de 20\' o más con pulso registrado');
+    return;
+  }
+  const mejor = sesiones.reduce((max, s) => (s.pulso > max.pulso ? s : max), sesiones[0]);
+  document.getElementById('uPulsoBici').value = mejor.pulso;
+  toast('Estimado ' + mejor.pulso + ' lpm (sesión del ' + mejor.fecha + ') — revisá y guardá');
+});
 
 document.getElementById('btnGuardarUmbrales').addEventListener('click', () => {
   const u = {
