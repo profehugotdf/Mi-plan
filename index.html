@@ -114,10 +114,11 @@
   .stat .v{font-family:var(--mono);font-size:1.1rem;font-weight:700;}
   .stat .l{font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;}
 
-  .discCard{border-radius:10px;background:var(--bg-panel-2);padding:11px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+  .discCard{border-radius:10px;background:var(--bg-panel-2);padding:11px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;border-left:4px solid transparent;}
   .discCard .info{flex:1;min-width:0;}
   .discCard .name{font-weight:700;font-size:0.9rem;display:flex;align-items:center;}
   .discCard .sub{font-family:var(--mono);font-size:0.72rem;color:var(--text-dim);margin-top:2px;}
+  .discCard .cumplimiento{font-family:var(--mono);font-size:0.68rem;margin-top:2px;}
   .discCard .time{font-family:var(--mono);font-size:1.25rem;font-weight:700;text-align:right;}
   .discCard.inactive{opacity:0.45;}
   .toggle{width:40px;height:23px;border-radius:20px;background:var(--line);position:relative;flex:none;cursor:pointer;transition:background .15s;}
@@ -2027,6 +2028,31 @@ function limpiarPlanHoy(mensaje) {
   document.getElementById('pulsoHint').textContent = '';
 }
 
+// Verde = cumplido cerca del plan, degradando a ámbar y a rojo cuanto más lejos (sub o sobre-cumplido
+// por igual). ratio = tiempo real / tiempo planeado.
+function colorCumplimiento(ratio) {
+  const desvio = Math.min(1, Math.abs(ratio - 1) / 0.5); // 0 = perfecto, 1 = 50%+ desviado
+  const colores = [[95, 184, 138], [224, 164, 88], [217, 112, 90]]; // verde, ámbar, rojo
+  let c0, c1, frac;
+  if (desvio < 0.5) { c0 = colores[0]; c1 = colores[1]; frac = desvio / 0.5; }
+  else { c0 = colores[1]; c1 = colores[2]; frac = (desvio - 0.5) / 0.5; }
+  const r = Math.round(c0[0] + (c1[0] - c0[0]) * frac);
+  const g = Math.round(c0[1] + (c1[1] - c0[1]) * frac);
+  const b = Math.round(c0[2] + (c1[2] - c0[2]) * frac);
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+
+// Suma la duración real de un día+disciplina puntual, leyendo directo de correr_sesiones/
+// bici_sesiones/kayak_sesiones (mismas que usa el Calendario). Fuerza y natación quedan afuera
+// por ahora: no tengo confirmado el esquema real de fuerza_sesiones ni existe una app de natación.
+function duracionRealDia(fechaISO, discKey) {
+  const mapaDisc = { carrera: 'carrera', bici: 'bici', kayak: 'kayak' };
+  if (!mapaDisc[discKey]) return null;
+  const sesiones = leerSesionesCrudas().filter((s) => s.fecha === fechaISO && s.deporte === discKey);
+  if (!sesiones.length) return 0;
+  return sesiones.reduce((acc, s) => acc + (s.duracionSeg || 0), 0);
+}
+
 function actualizarPlanHoy() {
   const fechaISO = document.getElementById('fechaPlan').value || hoyISO();
   const encontrado = cicloParaFecha(fechaISO);
@@ -2052,6 +2078,8 @@ function actualizarPlanHoy() {
 
   const listEl = document.getElementById('discList');
   listEl.innerHTML = '';
+  const hoy = hoyISO();
+  const yaPaso = fechaISO <= hoy;
   DISCIPLINAS.forEach((d) => {
     const dd = r.disciplinas[d.key];
     const activa = discActivas[fechaISO][d.key] !== undefined ? discActivas[fechaISO][d.key] : dd.sesionesSemana > 0;
@@ -2059,11 +2087,30 @@ function actualizarPlanHoy() {
 
     const card = document.createElement('div');
     card.className = 'discCard' + (activa ? '' : ' inactive');
+
+    let cumplimientoHtml = '';
+    if (activa && yaPaso) {
+      const realSeg = duracionRealDia(fechaISO, d.key);
+      if (realSeg !== null) {
+        if (realSeg === 0) {
+          card.style.borderLeftColor = colorCumplimiento(2); // rojo: no se registró nada
+          cumplimientoHtml = '<div class="cumplimiento" style="color:' + colorCumplimiento(2) + '">no se registró</div>';
+        } else {
+          const ratio = realSeg / (dd.tiempoSesionSeg || 1);
+          const color = colorCumplimiento(ratio);
+          card.style.borderLeftColor = color;
+          const pct = Math.round(ratio * 100);
+          cumplimientoHtml = '<div class="cumplimiento" style="color:' + color + '">real ' + segARelojes(realSeg) + ' · ' + pct + '%</div>';
+        }
+      }
+    }
+
     card.innerHTML =
       '<div class="toggle' + (activa ? ' on' : '') + '"><div class="knob"></div></div>' +
       '<div class="info">' +
         '<div class="name"><span class="dot" style="background:' + d.color + '"></span>' + d.label + '</div>' +
         '<div class="sub">' + dd.pct + '% del plan · ' + dd.sesionesSemana + ' ses/sem</div>' +
+        cumplimientoHtml +
       '</div>' +
       '<div class="time">' + segARelojes(dd.tiempoSesionSeg) + '</div>';
     card.querySelector('.toggle').addEventListener('click', () => {
