@@ -484,6 +484,7 @@
       <div class="field">
         <label>Ritmo umbral — Carrera (min:seg / km)</label>
         <input type="text" id="uRitmoCarrera" placeholder="4:30">
+        <div class="hint" id="uRitmoCarreraKmh"></div>
       </div>
       <div class="row">
         <div class="field">
@@ -495,9 +496,15 @@
           <input type="number" id="uFtpBici" min="0" step="1">
         </div>
       </div>
-      <div class="field">
-        <label>Pulso umbral — Kayak (lpm)</label>
-        <input type="number" id="uPulsoKayak" min="0" step="1">
+      <div class="row">
+        <div class="field">
+          <label>Pulso umbral — Kayak (lpm)</label>
+          <input type="number" id="uPulsoKayak" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>Pulso umbral — Bici (lpm)</label>
+          <input type="number" id="uPulsoBici" min="0" step="1">
+        </div>
       </div>
       <div class="field">
         <label>Ritmo umbral — Natación (min:seg / 100m)</label>
@@ -1185,13 +1192,23 @@ document.getElementById('btnGuardarPerfil').addEventListener('click', () => {
   toast('Perfil guardado ✓');
 });
 
+// Muestra el ritmo umbral de carrera también en km/h, en vivo, debajo del campo.
+function actualizarRitmoKmh() {
+  const segPorKm = relojASegundos(document.getElementById('uRitmoCarrera').value);
+  const hint = document.getElementById('uRitmoCarreraKmh');
+  hint.textContent = segPorKm ? (3600 / segPorKm).toFixed(1) + ' km/h' : '';
+}
+document.getElementById('uRitmoCarrera').addEventListener('input', actualizarRitmoKmh);
+
 function cargarFormularioUmbrales() {
   const u = leerUmbrales();
   document.getElementById('uRitmoCarrera').value = u.ritmoUmbralCarreraSegKm ? segARelojes(u.ritmoUmbralCarreraSegKm) : '';
   document.getElementById('uPulsoCarrera').value = u.pulsoUmbralCarrera || '';
   document.getElementById('uFtpBici').value = u.ftpBici || '';
   document.getElementById('uPulsoKayak').value = u.pulsoUmbralKayak || '';
+  document.getElementById('uPulsoBici').value = u.pulsoUmbralBici || '';
   document.getElementById('uRitmoNatacion').value = u.ritmoUmbralNatacion100m ? segARelojes(u.ritmoUmbralNatacion100m) : '';
+  actualizarRitmoKmh();
   document.getElementById('umbralesActualizado').textContent = u.actualizado ? ('Última actualización: ' + u.actualizado) : 'Todavía no cargaste ningún umbral.';
 }
 
@@ -1242,6 +1259,7 @@ document.getElementById('btnGuardarUmbrales').addEventListener('click', () => {
     pulsoUmbralCarrera: parseFloat(document.getElementById('uPulsoCarrera').value) || null,
     ftpBici: parseFloat(document.getElementById('uFtpBici').value) || null,
     pulsoUmbralKayak: parseFloat(document.getElementById('uPulsoKayak').value) || null,
+    pulsoUmbralBici: parseFloat(document.getElementById('uPulsoBici').value) || null,
     ritmoUmbralNatacion100m: relojASegundos(document.getElementById('uRitmoNatacion').value) || null,
     actualizado: hoyISO(),
   };
