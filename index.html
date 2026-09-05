@@ -1551,11 +1551,13 @@ function construirBloquesSemana() {
         const keyOverride = d.key + '#' + dia;
         const overrideSemana = overridesTodos[encontrado.id] && overridesTodos[encontrado.id][weekStartISO]
           ? overridesTodos[encontrado.id][weekStartISO][keyOverride] : null;
+        const diaActual = overrideSemana ? overrideSemana.dia : dia;
+        const fechaActual = new Date(domingo); fechaActual.setDate(fechaActual.getDate() + diaActual);
         bloques.push({
           discKey: d.key, label: d.label, color: d.color,
           cicloId: encontrado.id, weekStartISO,
           diaOriginal: dia, horaOriginal: entrada.hora,
-          diaActual: overrideSemana ? overrideSemana.dia : dia,
+          diaActual, fechaActualISO: fechaActual.toISOString().slice(0, 10),
           horaActual: overrideSemana ? overrideSemana.hora : entrada.hora,
           duracionSeg: r.disciplinas[d.key].tiempoSesionSeg,
         });
@@ -1571,6 +1573,50 @@ function guardarAjusteSemana(bloque, diaNuevo, horaNueva) {
   if (!overridesTodos[bloque.cicloId][bloque.weekStartISO]) overridesTodos[bloque.cicloId][bloque.weekStartISO] = {};
   overridesTodos[bloque.cicloId][bloque.weekStartISO][bloque.discKey + '#' + bloque.diaOriginal] = { dia: diaNuevo, hora: horaNueva };
   guardarOverridesSemana(overridesTodos);
+}
+
+// Disciplinas sin app propia que aporte datos reales — se confirman a mano tocando el bloque.
+const DISCIPLINAS_SIN_SENSOR = ['fuerza', 'natacion'];
+const LS_CUMPLIMIENTO_MANUAL = 'plan_cumplimiento_manual_v1';
+
+function leerCumplimientoManual() {
+  try { return JSON.parse(localStorage.getItem(LS_CUMPLIMIENTO_MANUAL)) || {}; } catch (e) { return {}; }
+}
+function guardarCumplimientoManual(o) {
+  localStorage.setItem(LS_CUMPLIMIENTO_MANUAL, JSON.stringify(o));
+}
+
+// Color de cumplimiento de un bloque puntual, o null si es un día futuro (todavía no aplica).
+function colorBordeBloque(b) {
+  const hoy = hoyISO();
+  if (b.fechaActualISO > hoy) return null;
+  if (DISCIPLINAS_SIN_SENSOR.indexOf(b.discKey) === -1) {
+    const real = duracionRealDia(b.fechaActualISO, b.discKey);
+    if (real === null) return null;
+    return real === 0 ? colorCumplimiento(2) : colorCumplimiento(real / (b.duracionSeg || 1));
+  }
+  const m = leerCumplimientoManual();
+  const entrada = m[b.fechaActualISO] && m[b.fechaActualISO][b.discKey];
+  if (!entrada) return null;
+  if (!entrada.hecho) return colorCumplimiento(2);
+  return colorCumplimiento((entrada.duracionSeg || b.duracionSeg) / (b.duracionSeg || 1));
+}
+
+function manejarTapBloque(bloque) {
+  const hoy = hoyISO();
+  if (DISCIPLINAS_SIN_SENSOR.indexOf(bloque.discKey) === -1 || bloque.fechaActualISO > hoy) return;
+  const hizo = confirm('¿Hiciste "' + bloque.label + '" el ' + bloque.fechaActualISO + '?');
+  const m = leerCumplimientoManual();
+  if (!m[bloque.fechaActualISO]) m[bloque.fechaActualISO] = {};
+  if (hizo) {
+    const texto = prompt('Duración real (mm:ss) — dejalo vacío para usar la planeada (' + segARelojes(bloque.duracionSeg) + ')', '');
+    const duracionSeg = texto ? relojASegundos(texto) : bloque.duracionSeg;
+    m[bloque.fechaActualISO][bloque.discKey] = { hecho: true, duracionSeg };
+  } else {
+    m[bloque.fechaActualISO][bloque.discKey] = { hecho: false, duracionSeg: 0 };
+  }
+  guardarCumplimientoManual(m);
+  renderSemana();
 }
 
 function renderSemana() {
@@ -1616,6 +1662,8 @@ function renderSemana() {
     el.style.width = (colDiaPx - 2).toFixed(1) + 'px';
     el.style.height = alturaPx.toFixed(1) + 'px';
     el.style.background = b.color;
+    const colorBorde = colorBordeBloque(b);
+    if (colorBorde) el.style.boxShadow = 'inset 0 0 0 3px ' + colorBorde;
     el.innerHTML = b.label + '<div class="hora">' + b.horaActual + '</div>';
     grid.appendChild(el);
     activarDragBloque(el, b, colDiaPx, cabeceraPx);
@@ -1623,11 +1671,13 @@ function renderSemana() {
 }
 
 function activarDragBloque(el, bloque, colDiaPx, cabeceraPx) {
-  let arrastrando = false, offsetX = 0, offsetY = 0;
+  let arrastrando = false, offsetX = 0, offsetY = 0, startX = 0, startY = 0, movioSuficiente = false;
 
   el.addEventListener('pointerdown', (e) => {
     el.setPointerCapture(e.pointerId);
     arrastrando = true;
+    movioSuficiente = false;
+    startX = e.clientX; startY = e.clientY;
     el.classList.add('arrastrando');
     const rect = el.getBoundingClientRect();
     offsetX = e.clientX - rect.left;
@@ -1636,6 +1686,7 @@ function activarDragBloque(el, bloque, colDiaPx, cabeceraPx) {
 
   el.addEventListener('pointermove', (e) => {
     if (!arrastrando) return;
+    if (Math.abs(e.clientX - startX) > 6 || Math.abs(e.clientY - startY) > 6) movioSuficiente = true;
     const gridRect = document.getElementById('semGrid').getBoundingClientRect();
     el.style.left = (e.clientX - gridRect.left - offsetX).toFixed(1) + 'px';
     el.style.top = (e.clientY - gridRect.top - offsetY).toFixed(1) + 'px';
@@ -1645,6 +1696,10 @@ function activarDragBloque(el, bloque, colDiaPx, cabeceraPx) {
     if (!arrastrando) return;
     arrastrando = false;
     el.classList.remove('arrastrando');
+    if (!movioSuficiente) {
+      manejarTapBloque(bloque); // fue un toque, no un arrastre — capaz abre la confirmación manual
+      return;
+    }
     const xLocal = parseFloat(el.style.left);
     const yLocal = parseFloat(el.style.top);
     let diaNuevo = Math.round((xLocal - COL_HORA_PX) / colDiaPx);
