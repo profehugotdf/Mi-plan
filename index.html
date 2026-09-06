@@ -1343,6 +1343,11 @@ DISCIPLINAS.forEach((d) => { DISC_LABEL[d.key] = d.label; });
 // Más completo y más confiable que entrenamiento_forma_registro para mostrar detalle
 // (ese registro es solo {fecha,deporte,tss} pensado para el EWMA, y puede quedar con
 // "fantasmas" si algún borrado no se sincronizó bien).
+function horaDeFecha(fechaCompleta) {
+  const d = new Date(fechaCompleta);
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
 function leerSesionesCrudas() {
   function tryParse(key) {
     try { return JSON.parse(localStorage.getItem(key)) || []; } catch (e) { return []; }
@@ -1351,7 +1356,7 @@ function leerSesionesCrudas() {
   tryParse('correr_sesiones').forEach((s) => {
     if (!s.fecha) return;
     out.push({
-      deporte: 'carrera', fecha: String(s.fecha).slice(0, 10),
+      deporte: 'carrera', fecha: String(s.fecha).slice(0, 10), horaInicio: horaDeFecha(s.fecha),
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: s.ritmoPromedioSegKm || null, watts: null, pulso: s.pulsoPromedio || null,
       tss: s.tss || 0,
@@ -1360,7 +1365,7 @@ function leerSesionesCrudas() {
   tryParse('bici_sesiones').forEach((s) => {
     if (!s.date) return;
     out.push({
-      deporte: 'bici', fecha: new Date(s.date).toISOString().slice(0, 10),
+      deporte: 'bici', fecha: new Date(s.date).toISOString().slice(0, 10), horaInicio: horaDeFecha(s.date),
       duracionSeg: Math.round(s.dur || 0), distanciaM: s.dist || null,
       ritmoSegKm: null, watts: s.np || null, pulso: s.hrAvg || null,
       tss: s.tss || 0,
@@ -1369,7 +1374,7 @@ function leerSesionesCrudas() {
   tryParse('kayak_sesiones').forEach((s) => {
     if (!s.fecha) return;
     out.push({
-      deporte: 'kayak', fecha: String(s.fecha).slice(0, 10),
+      deporte: 'kayak', fecha: String(s.fecha).slice(0, 10), horaInicio: horaDeFecha(s.fecha),
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: null, watts: null, pulso: s.pulsoPromedio || null,
       tss: s.tss || 0,
@@ -1619,6 +1624,18 @@ function manejarTapBloque(bloque) {
   renderSemana();
 }
 
+// Hora de inicio real de una disciplina un día puntual (carrera/bici/kayak). Si hay más de una
+// sesión ese día, usa la hora de la primera y suma las duraciones.
+function sesionRealDia(fechaISO, discKey) {
+  if (['carrera', 'bici', 'kayak'].indexOf(discKey) === -1) return null;
+  const sesiones = leerSesionesCrudas().filter((s) => s.fecha === fechaISO && s.deporte === discKey);
+  if (!sesiones.length) return null;
+  return {
+    horaInicio: sesiones[0].horaInicio || '00:00',
+    duracionSeg: sesiones.reduce((acc, s) => acc + (s.duracionSeg || 0), 0),
+  };
+}
+
 function renderSemana() {
   const domingo = new Date(semanaActual);
   const fin = new Date(domingo); fin.setDate(fin.getDate() + 6);
@@ -1650,9 +1667,14 @@ function renderSemana() {
   const cabeceraPx = grid.querySelector('.semDiaCab').getBoundingClientRect().height || 28;
 
   construirBloquesSemana().forEach((b) => {
-    const minInicio = horaAMinutos(b.horaActual);
+    let horaDibujo = b.horaActual, duracionDibujo = b.duracionSeg, esReal = false;
+    if (b.fechaActualISO <= hoy) {
+      const real = sesionRealDia(b.fechaActualISO, b.discKey);
+      if (real) { horaDibujo = real.horaInicio; duracionDibujo = real.duracionSeg; esReal = true; }
+    }
+    const minInicio = horaAMinutos(horaDibujo);
     const top = cabeceraPx + ((minInicio / 60) - HORA_INICIO_GRID) * PX_POR_HORA;
-    const alturaPx = Math.max(16, (b.duracionSeg / 3600) * PX_POR_HORA);
+    const alturaPx = Math.max(16, (duracionDibujo / 3600) * PX_POR_HORA);
     const left = COL_HORA_PX + b.diaActual * colDiaPx;
 
     const el = document.createElement('div');
@@ -1664,7 +1686,7 @@ function renderSemana() {
     el.style.background = b.color;
     const colorBorde = colorBordeBloque(b);
     if (colorBorde) el.style.boxShadow = 'inset 0 0 0 3px ' + colorBorde;
-    el.innerHTML = b.label + '<div class="hora">' + b.horaActual + '</div>';
+    el.innerHTML = b.label + '<div class="hora">' + horaDibujo + (esReal ? ' · real' : '') + '</div>';
     grid.appendChild(el);
     activarDragBloque(el, b, colDiaPx, cabeceraPx);
   });
@@ -2388,6 +2410,15 @@ function duracionRealDia(fechaISO, discKey) {
   return sesiones.reduce((acc, s) => acc + (s.duracionSeg || 0), 0);
 }
 
+// Para disciplinas sin esquema de sesión confirmado (Fuerza): no puedo comparar duración,
+// pero Fuerza sí escribe a entrenamiento_forma_registro, así que uso eso como señal de "se hizo".
+function tssRealDiaRegistroCompartido(fechaISO, discKey) {
+  const registro = leerRegistroForma();
+  const entradas = registro.filter((r) => (r.fecha || '').slice(0, 10) === fechaISO && r.deporte === discKey);
+  if (!entradas.length) return null;
+  return entradas.reduce((acc, r) => acc + (parseFloat(r.tss) || 0), 0);
+}
+
 function actualizarPlanHoy() {
   const fechaISO = document.getElementById('fechaPlan').value || hoyISO();
   const encontrado = cicloParaFecha(fechaISO);
@@ -2436,6 +2467,17 @@ function actualizarPlanHoy() {
           card.style.borderLeftColor = color;
           const pct = Math.round(ratio * 100);
           cumplimientoHtml = '<div class="cumplimiento" style="color:' + color + '">real ' + segARelojes(realSeg) + ' · ' + pct + '%</div>';
+        }
+      } else {
+        // sin esquema de duración confirmado (Fuerza, Natación) — uso el registro compartido
+        // solo como señal de "se hizo o no", sin comparar contra el tiempo planeado.
+        const tssReal = tssRealDiaRegistroCompartido(fechaISO, d.key);
+        if (tssReal === null) {
+          card.style.borderLeftColor = colorCumplimiento(2);
+          cumplimientoHtml = '<div class="cumplimiento" style="color:' + colorCumplimiento(2) + '">no se registró</div>';
+        } else {
+          card.style.borderLeftColor = colorCumplimiento(1);
+          cumplimientoHtml = '<div class="cumplimiento" style="color:' + colorCumplimiento(1) + '">hecho · TSS ' + Math.round(tssReal) + '</div>';
         }
       }
     }
