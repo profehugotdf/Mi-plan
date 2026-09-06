@@ -1348,6 +1348,14 @@ function horaDeFecha(fechaCompleta) {
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
+// Fecha calendario en huso HORARIO LOCAL, nunca del ISO en UTC directo — Ushuaia es UTC-3,
+// así que una sesión terminada a las 22:00 local cae en el ISO-UTC del día siguiente si se
+// usa slice(0,10) sobre el string crudo.
+function fechaLocalISO(fechaOrigen) {
+  const d = new Date(fechaOrigen);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function leerSesionesCrudas() {
   function tryParse(key) {
     try { return JSON.parse(localStorage.getItem(key)) || []; } catch (e) { return []; }
@@ -1355,8 +1363,12 @@ function leerSesionesCrudas() {
   const out = [];
   tryParse('correr_sesiones').forEach((s) => {
     if (!s.fecha) return;
+    // Correr graba `fecha` al FINALIZAR la sesión, no al empezarla — puede estar corrida si
+    // Hugo demoró en llegar a esa pantalla. Si existe `inicioISO` (agregado más adelante en
+    // Correr), es el dato bueno; si no, se aproxima restando la duración como respaldo.
+    const inicioMs = s.inicioISO ? new Date(s.inicioISO).getTime() : new Date(s.fecha).getTime() - (s.duracionSeg || 0) * 1000;
     out.push({
-      deporte: 'carrera', fecha: String(s.fecha).slice(0, 10), horaInicio: horaDeFecha(s.fecha),
+      deporte: 'carrera', fecha: fechaLocalISO(inicioMs), horaInicio: horaDeFecha(inicioMs),
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: s.ritmoPromedioSegKm || null, watts: null, pulso: s.pulsoPromedio || null,
       tss: s.tss || 0,
@@ -1365,7 +1377,7 @@ function leerSesionesCrudas() {
   tryParse('bici_sesiones').forEach((s) => {
     if (!s.date) return;
     out.push({
-      deporte: 'bici', fecha: new Date(s.date).toISOString().slice(0, 10), horaInicio: horaDeFecha(s.date),
+      deporte: 'bici', fecha: fechaLocalISO(s.date), horaInicio: horaDeFecha(s.date),
       duracionSeg: Math.round(s.dur || 0), distanciaM: s.dist || null,
       ritmoSegKm: null, watts: s.np || null, pulso: s.hrAvg || null,
       tss: s.tss || 0,
@@ -1374,7 +1386,7 @@ function leerSesionesCrudas() {
   tryParse('kayak_sesiones').forEach((s) => {
     if (!s.fecha) return;
     out.push({
-      deporte: 'kayak', fecha: String(s.fecha).slice(0, 10), horaInicio: horaDeFecha(s.fecha),
+      deporte: 'kayak', fecha: fechaLocalISO(s.fecha), horaInicio: horaDeFecha(s.fecha),
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: null, watts: null, pulso: s.pulsoPromedio || null,
       tss: s.tss || 0,
