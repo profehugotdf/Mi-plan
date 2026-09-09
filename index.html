@@ -474,8 +474,29 @@
         <label>Peso (kg)</label>
         <input type="number" id="uPeso" min="0" step="0.1">
       </div>
+      <div class="row">
+        <div class="field">
+          <label>Edad (años)</label>
+          <input type="number" id="uEdad" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>Sexo (para el cálculo de calorías)</label>
+          <select id="uSexo">
+            <option value="">sin definir</option>
+            <option value="M">Masculino</option>
+            <option value="F">Femenino</option>
+          </select>
+        </div>
+      </div>
       <button class="primary" style="width:100%" id="btnGuardarPerfil">Guardar perfil</button>
       <p class="hint" id="perfilActualizado" style="margin-top:6px"></p>
+    </div>
+
+    <div class="card">
+      <h3>Gasto calórico</h3>
+      <p style="margin-bottom:10px">Calcula las calorías de cada sesión real (fórmula de Keytel, basada en pulso) y las suma a <span class="mono">entrenamiento_forma_registro</span> — para que una futura app de nutrición las pueda leer sin saber nada de deportes. Necesita peso, edad y sexo cargados arriba, y pulso promedio en la sesión.</p>
+      <button class="primary" style="width:100%" id="btnRecalcularCalorias">Recalcular calorías</button>
+      <p class="hint" id="caloriasInfo" style="margin-top:6px"></p>
     </div>
 
     <div class="card">
@@ -532,14 +553,26 @@
     </div>
 
     <div class="card">
-      <h3>Backup</h3>
-      <p style="margin-bottom:10px">Exportá todo (ciclos + ajustes de carga por día) a un archivo, o restaurá desde uno.</p>
+      <h3>Backup — solo Plan de Ciclos</h3>
+      <p style="margin-bottom:10px">Exportá tus ciclos + ajustes de carga por día a un archivo, o restaurá desde uno.</p>
       <div class="btnRow">
         <button id="btnExportar">Exportar JSON</button>
         <button id="btnImportar">Importar JSON</button>
         <input type="file" id="fileImportar" accept="application/json" style="display:none">
       </div>
     </div>
+
+    <div class="card">
+      <h3>Backup completo — todas las apps</h3>
+      <p style="margin-bottom:10px">Exporta TODO lo que haya en el almacenamiento de este navegador — Correr, Bici, Kayak, Fuerza, Plan de Ciclos, lo que sea — en un solo archivo. Para restaurar una app entera después de perder el dispositivo, o antes de borrar algo grande.</p>
+      <div class="btnRow">
+        <button id="btnExportarTodo">Exportar backup completo</button>
+        <button id="btnImportarTodo">Restaurar backup completo</button>
+        <input type="file" id="fileImportarTodo" accept="application/json" style="display:none">
+      </div>
+      <p class="hint" id="backupTodoInfo" style="margin-top:6px"></p>
+    </div>
+
     <div class="card">
       <h3>Borrar ciclo activo</h3>
       <p style="margin-bottom:10px">Elimina el ciclo seleccionado y sus ajustes de carga por día. No se puede deshacer.</p>
@@ -1181,12 +1214,16 @@ function guardarPerfil(p) {
 function cargarFormularioPerfil() {
   const p = leerPerfil();
   document.getElementById('uPeso').value = p.pesoKg || '';
+  document.getElementById('uEdad').value = p.edad || '';
+  document.getElementById('uSexo').value = p.sexo || '';
   document.getElementById('perfilActualizado').textContent = p.actualizado ? ('Última actualización: ' + p.actualizado) : 'Todavía no cargaste tu peso.';
 }
 
 document.getElementById('btnGuardarPerfil').addEventListener('click', () => {
-  const p = leerPerfil(); // objeto completo, para no pisar campos que agreguen otras apps (ej. edad)
+  const p = leerPerfil(); // objeto completo, para no pisar campos que agreguen otras apps
   p.pesoKg = parseFloat(document.getElementById('uPeso').value) || null;
+  p.edad = parseFloat(document.getElementById('uEdad').value) || null;
+  p.sexo = document.getElementById('uSexo').value || null;
   p.actualizado = hoyISO();
   guardarPerfil(p);
   cargarFormularioPerfil();
@@ -1200,6 +1237,60 @@ function actualizarRitmoKmh() {
   hint.textContent = segPorKm ? (3600 / segPorKm).toFixed(1) + ' km/h' : '';
 }
 document.getElementById('uRitmoCarrera').addEventListener('input', actualizarRitmoKmh);
+
+/* ========================= GASTO CALÓRICO (Keytel, basado en pulso) ========================= */
+
+function calcularCaloriasSesion(pulso, pesoKg, edadAnios, sexo, duracionMin) {
+  if (!pulso || !pesoKg || !edadAnios || !sexo || !duracionMin) return null;
+  let kcalPorMin;
+  if (sexo === 'M') {
+    kcalPorMin = (-55.0969 + 0.6309 * pulso + 0.1988 * pesoKg + 0.2017 * edadAnios) / 4.184;
+  } else if (sexo === 'F') {
+    kcalPorMin = (-20.4022 + 0.4472 * pulso - 0.1263 * pesoKg + 0.074 * edadAnios) / 4.184;
+  } else {
+    return null;
+  }
+  if (kcalPorMin <= 0) return null; // la fórmula puede dar negativo a pulsos muy bajos, sin sentido físico
+  return Math.round(kcalPorMin * duracionMin);
+}
+
+// Recorre TODAS las sesiones reales disponibles (no solo las de hoy) y les agrega el campo
+// `calorias` en entrenamiento_forma_registro, por upsert vía id — igual que el importador de
+// Garmin. No inventa nada: si falta pulso, peso, edad o sexo, esa sesión queda sin calorías.
+function recalcularCalorias() {
+  const perfil = leerPerfil();
+  if (!perfil.pesoKg || !perfil.edad || !perfil.sexo) {
+    return { ok: false, motivo: 'Cargá peso, edad y sexo en Perfil primero.' };
+  }
+  const sesiones = leerSesionesCrudas();
+  const registro = leerRegistroForma();
+  let actualizadas = 0, sinPulso = 0, sinMatch = 0;
+  sesiones.forEach((s) => {
+    if (s.id == null) { sinMatch++; return; }
+    const idx = registro.findIndex((r) => r.deporte === s.deporte && r.id === s.id);
+    if (idx === -1) { sinMatch++; return; } // esa sesión no está (todavía) en el registro compartido
+    const duracionMin = (s.duracionSeg || 0) / 60;
+    const cal = calcularCaloriasSesion(s.pulso, perfil.pesoKg, perfil.edad, perfil.sexo, duracionMin);
+    if (cal == null) { sinPulso++; return; }
+    registro[idx].calorias = cal;
+    actualizadas++;
+  });
+  localStorage.setItem(LS_REGISTRO_FORMA, JSON.stringify(registro));
+  return { ok: true, actualizadas, sinPulso, sinMatch };
+}
+
+document.getElementById('btnRecalcularCalorias').addEventListener('click', () => {
+  const r = recalcularCalorias();
+  const info = document.getElementById('caloriasInfo');
+  if (!r.ok) {
+    info.textContent = r.motivo;
+    return;
+  }
+  info.textContent = 'Actualizadas ' + r.actualizadas + ' sesiones.' +
+    (r.sinPulso ? ' ' + r.sinPulso + ' sin pulso registrado.' : '') +
+    (r.sinMatch ? ' ' + r.sinMatch + ' todavía no llegaron al registro compartido.' : '');
+  toast('Calorías recalculadas ✓');
+});
 
 function cargarFormularioUmbrales() {
   const u = leerUmbrales();
@@ -1244,6 +1335,15 @@ function importarUmbralesDeApps() {
   if (perfilCorrer && perfilCorrer.pesoKg) {
     document.getElementById('uPeso').value = perfilCorrer.pesoKg;
     encontrados.push('peso de Correr');
+  }
+  // edad/sexo: no confirmado si correr_perfil los guarda todavía — se toman si aparecen, sin asumir.
+  if (perfilCorrer && perfilCorrer.edad) {
+    document.getElementById('uEdad').value = perfilCorrer.edad;
+    encontrados.push('edad de Correr');
+  }
+  if (perfilCorrer && perfilCorrer.sexo) {
+    document.getElementById('uSexo').value = perfilCorrer.sexo;
+    encontrados.push('sexo de Correr');
   }
 
   if (encontrados.length) {
@@ -1371,7 +1471,7 @@ function leerSesionesCrudas() {
       deporte: 'carrera', fecha: fechaLocalISO(inicioMs), horaInicio: horaDeFecha(inicioMs),
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: s.ritmoPromedioSegKm || null, watts: null, pulso: s.pulsoPromedio || null,
-      tss: s.tss || 0,
+      tss: s.tss || 0, id: s.id || null,
     });
   });
   tryParse('bici_sesiones').forEach((s) => {
@@ -1380,7 +1480,7 @@ function leerSesionesCrudas() {
       deporte: 'bici', fecha: fechaLocalISO(s.date), horaInicio: horaDeFecha(s.date),
       duracionSeg: Math.round(s.dur || 0), distanciaM: s.dist || null,
       ritmoSegKm: null, watts: s.np || null, pulso: s.hrAvg || null,
-      tss: s.tss || 0,
+      tss: s.tss || 0, id: s.date || null, // bici usa el propio timestamp `date` como id en el registro compartido
     });
   });
   tryParse('kayak_sesiones').forEach((s) => {
@@ -1389,7 +1489,19 @@ function leerSesionesCrudas() {
       deporte: 'kayak', fecha: fechaLocalISO(s.fecha), horaInicio: horaDeFecha(s.fecha),
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: null, watts: null, pulso: s.pulsoPromedio || null,
-      tss: s.tss || 0,
+      tss: s.tss || 0, id: s.id || null,
+    });
+  });
+  // Fuerza: campos NO confirmados contra el archivo real (no lo tengo cargado en esta
+  // conversación) — asumidos por analogía con el resto. Si algo no calza, avisar para ajustar.
+  tryParse('fuerza_sesiones').forEach((s) => {
+    if (!s.fecha) return;
+    const duracionSeg = s.duracionSeg != null ? s.duracionSeg : (s.duracionMin != null ? s.duracionMin * 60 : 0);
+    out.push({
+      deporte: 'fuerza', fecha: fechaLocalISO(s.fecha), horaInicio: horaDeFecha(s.fecha),
+      duracionSeg, distanciaM: null,
+      ritmoSegKm: null, watts: null, pulso: s.pulsoPromedio || null,
+      tss: s.tss || 0, id: s.id || null,
     });
   });
   return out;
@@ -1476,6 +1588,13 @@ function mostrarDetalleDia(iso, real) {
     real.sesiones.forEach((s) => {
       html += '<div class="sesionCard" style="margin-bottom:6px"><div class="estructura" style="font-size:0.8rem">' + formatSesionResumen(s) + '</div></div>';
     });
+    const registro = leerRegistroForma();
+    const caloriasDia = registro
+      .filter((r) => (r.fecha || '').slice(0, 10) === iso && r.calorias)
+      .reduce((acc, r) => acc + r.calorias, 0);
+    if (caloriasDia > 0) {
+      html += '<p class="hint" style="margin-top:2px">🔥 ' + Math.round(caloriasDia) + ' kcal (gasto estimado, Keytel)</p>';
+    }
   }
 
   const encontrado = cicloParaFecha(iso);
@@ -2857,6 +2976,60 @@ document.getElementById('fileImportar').addEventListener('change', (e) => {
   reader.readAsText(file);
 });
 
+/* ========================= BACKUP COMPLETO (TODAS LAS APPS) ========================= */
+
+document.getElementById('btnExportarTodo').addEventListener('click', () => {
+  const todo = {};
+  let totalBytes = 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    const val = localStorage.getItem(key);
+    todo[key] = val;
+    totalBytes += (key.length + (val ? val.length : 0));
+  }
+  const blob = new Blob([JSON.stringify(todo)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'backup-completo-' + hoyISO() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('backupTodoInfo').textContent = Object.keys(todo).length + ' claves exportadas (~' + (totalBytes / 1024 / 1024).toFixed(2) + ' MB).';
+});
+
+document.getElementById('btnImportarTodo').addEventListener('click', () => {
+  document.getElementById('fileImportarTodo').click();
+});
+document.getElementById('fileImportarTodo').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let datos;
+    try {
+      datos = JSON.parse(reader.result);
+    } catch (err) {
+      toast('Ese archivo no es un backup válido');
+      return;
+    }
+    const claves = Object.keys(datos);
+    if (!claves.length) { toast('El backup está vacío'); return; }
+    const ok = confirm(
+      'Esto va a sobrescribir ' + claves.length + ' claves de TODAS las apps en este navegador ' +
+      '(Correr, Bici, Kayak, Fuerza, Plan de Ciclos — lo que traiga el archivo), no solo Plan de Ciclos. ' +
+      'Lo que ya tenías con esos mismos nombres se reemplaza. ¿Confirmás?'
+    );
+    if (!ok) return;
+    let restauradas = 0;
+    claves.forEach((k) => {
+      try { localStorage.setItem(k, datos[k]); restauradas++; } catch (err) { console.error('No se pudo restaurar ' + k, err); }
+    });
+    document.getElementById('backupTodoInfo').textContent = 'Restauradas ' + restauradas + ' de ' + claves.length + ' claves. Recargá la página (o cada app) para ver los cambios.';
+    toast('Backup restaurado — recargá para ver los cambios');
+  };
+  reader.readAsText(file);
+});
+
 document.getElementById('btnBorrarCiclo').addEventListener('click', () => {
   if (!store.activoId) { toast('No hay ciclo activo'); return; }
   if (!confirm('¿Borrar el ciclo "' + store.ciclos[store.activoId].nombre + '"? No se puede deshacer.')) return;
@@ -2878,6 +3051,7 @@ renderListaCiclos();
 renderHoy();
 cargarFormularioUmbrales();
 cargarFormularioPerfil();
+recalcularCalorias(); // en silencio, para capturar sesiones nuevas de las apps hermanas sin que Hugo tenga que acordarse de tocar el botón
 </script>
 </body>
 </html>
