@@ -172,6 +172,7 @@
   .calDia{aspect-ratio:1;border-radius:8px;background:var(--bg-panel-2);border:1px solid var(--line);padding:3px 2px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;cursor:pointer;}
   .calDia.fuera{opacity:0.28;}
   .calDia.hoy{outline:2px solid var(--accent);outline-offset:-1px;}
+  .calDia.riesgo{background:rgba(217,112,90,0.18);border-color:#d9705a;}
   .calDia .num{font-size:0.64rem;color:var(--text-dim);font-family:var(--mono);}
   .calDia .dots{display:flex;flex-wrap:wrap;gap:1.5px;justify-content:center;margin-top:3px;min-height:6px;}
   .calDia .dots span{width:5px;height:5px;border-radius:50%;}
@@ -1518,6 +1519,60 @@ function formatSesionResumen(s) {
   return partes.join(' · ');
 }
 
+/* ========================= CRUCE CON NUTRICIÓN (baja disponibilidad energética) ========================= */
+
+const LS_NUTRICION = 'nutricion_resumen_diario';
+
+function leerNutricionResumen() {
+  try { return JSON.parse(localStorage.getItem(LS_NUTRICION)) || {}; } catch (e) { return {}; }
+}
+// Tolera dos formatos posibles: objeto {fecha: {...}} o array [{fecha, ...}] — no asumo cuál
+// eligió Nutrición sin poder confirmarlo.
+function nutricionDia(fechaISO) {
+  const datos = leerNutricionResumen();
+  if (datos[fechaISO]) return datos[fechaISO];
+  if (Array.isArray(datos)) {
+    const encontrado = datos.find((d) => (d.fecha || '').slice(0, 10) === fechaISO);
+    if (encontrado) return encontrado;
+  }
+  return null;
+}
+
+function tssTotalDiaReal(fechaISO) {
+  const registro = leerRegistroForma();
+  const entradas = registro.filter((r) => (r.fecha || '').slice(0, 10) === fechaISO);
+  if (!entradas.length) return null;
+  return entradas.reduce((acc, r) => acc + (parseFloat(r.tss) || 0), 0);
+}
+
+// Percentil 75 del TSS diario real de los últimos 90 días — "carga alta" relativa al propio
+// historial de Hugo, no un número fijo igual para cualquiera.
+function umbralTssAlto() {
+  const registro = leerRegistroForma();
+  const hoy = hoyISO();
+  const desde = new Date(hoy + 'T00:00:00'); desde.setDate(desde.getDate() - 90);
+  const desdeISO = desde.toISOString().slice(0, 10);
+  const porDia = {};
+  registro.forEach((r) => {
+    const f = (r.fecha || '').slice(0, 10);
+    if (!f || f < desdeISO || f > hoy) return;
+    porDia[f] = (porDia[f] || 0) + (parseFloat(r.tss) || 0);
+  });
+  const valores = Object.values(porDia).sort((a, b) => a - b);
+  if (!valores.length) return null;
+  return valores[Math.floor(0.75 * (valores.length - 1))];
+}
+
+// "Día de riesgo" = carga alta (TSS ≥ percentil 75 propio) + balance positivo (déficit) ese
+// mismo día. Sin entrada de Nutrición ese día, nunca alerta — no se asume nada sin datos.
+function esDiaDeRiesgo(fechaISO, umbral) {
+  const nut = nutricionDia(fechaISO);
+  if (!nut || nut.balance == null || umbral == null) return false;
+  const tss = tssTotalDiaReal(fechaISO);
+  if (tss == null) return false;
+  return tss >= umbral && nut.balance > 0;
+}
+
 function renderCalendario() {
   const sesiones = leerSesionesCrudas();
   const porDia = {};
@@ -1537,6 +1592,7 @@ function renderCalendario() {
   }
 
   const hoy = hoyISO();
+  const umbral = umbralTssAlto();
 
   const body = document.getElementById('calGridBody');
   body.innerHTML = '';
@@ -1569,9 +1625,11 @@ function renderCalendario() {
       }
     }
 
+    const riesgo = !esFuturo && esDiaDeRiesgo(iso, umbral);
+
     const div = document.createElement('div');
-    div.className = 'calDia' + (esDelMes ? '' : ' fuera') + (iso === hoy ? ' hoy' : '');
-    div.innerHTML = '<div class="num">' + d.getDate() + '</div><div class="dots">' + dotsHtml + '</div>';
+    div.className = 'calDia' + (esDelMes ? '' : ' fuera') + (iso === hoy ? ' hoy' : '') + (riesgo ? ' riesgo' : '');
+    div.innerHTML = '<div class="num">' + d.getDate() + (riesgo ? ' ⚠️' : '') + '</div><div class="dots">' + dotsHtml + '</div>';
     div.addEventListener('click', () => mostrarDetalleDia(iso, porDia[iso]));
     body.appendChild(div);
   }
@@ -1595,6 +1653,20 @@ function mostrarDetalleDia(iso, real) {
     if (caloriasDia > 0) {
       html += '<p class="hint" style="margin-top:2px">🔥 ' + Math.round(caloriasDia) + ' kcal (gasto estimado, Keytel)</p>';
     }
+  }
+
+  const nut = nutricionDia(iso);
+  if (nut) {
+    const riesgo = esDiaDeRiesgo(iso, umbralTssAlto());
+    html += '<p style="margin:8px 0 4px">Nutrición ese día' + (riesgo ? ' — ⚠️ carga alta + déficit' : '') + ':</p>';
+    html +=
+      '<div class="sesionCard"' + (riesgo ? ' style="border:1px solid #d9705a"' : '') + '>' +
+        '<div class="estructura" style="font-size:0.8rem">' +
+          'consumido ' + Math.round(nut.consumido || 0) + ' kcal · gasto ' + Math.round(nut.gastoTotal || 0) + ' kcal · ' +
+          'balance ' + (nut.balance > 0 ? '+' : '') + Math.round(nut.balance || 0) + ' (' + (nut.balance > 0 ? 'déficit' : 'superávit') + ')' +
+          (nut.proteinasG != null ? ' · proteína ' + Math.round(nut.proteinasG) + 'g' : '') +
+        '</div>' +
+      '</div>';
   }
 
   const encontrado = cicloParaFecha(iso);
@@ -1817,7 +1889,8 @@ function renderSemana() {
     el.style.background = b.color;
     const colorBorde = colorBordeBloque(b);
     if (colorBorde) el.style.boxShadow = 'inset 0 0 0 3px ' + colorBorde;
-    el.innerHTML = b.label + '<div class="hora">' + horaDibujo + (esReal ? ' · real' : '') + '</div>';
+    const riesgoNut = b.fechaActualISO <= hoy && esDiaDeRiesgo(b.fechaActualISO, umbralTssAlto());
+    el.innerHTML = (riesgoNut ? '⚠️ ' : '') + b.label + '<div class="hora">' + horaDibujo + (esReal ? ' · real' : '') + '</div>';
     grid.appendChild(el);
     activarDragBloque(el, b, colDiaPx, cabeceraPx);
   });
