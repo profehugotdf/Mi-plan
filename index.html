@@ -491,6 +491,9 @@
       </div>
       <button class="primary" style="width:100%" id="btnGuardarPerfil">Guardar perfil</button>
       <p class="hint" id="perfilActualizado" style="margin-top:6px"></p>
+      <div id="pesoGraficoWrap" style="display:none;margin-top:10px">
+        <svg id="pesoGrafico" viewBox="0 0 400 120" style="width:100%;height:120px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
+      </div>
     </div>
 
     <div class="card">
@@ -1218,6 +1221,33 @@ function cargarFormularioPerfil() {
   document.getElementById('uEdad').value = p.edad || '';
   document.getElementById('uSexo').value = p.sexo || '';
   document.getElementById('perfilActualizado').textContent = p.actualizado ? ('Última actualización: ' + p.actualizado) : 'Todavía no cargaste tu peso.';
+  dibujarGraficoPeso(p.historialPeso || []);
+}
+
+function dibujarGraficoPeso(historial) {
+  const wrap = document.getElementById('pesoGraficoWrap');
+  if (!historial || historial.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const svg = document.getElementById('pesoGrafico');
+  const padL = 32, padR = 8, padT = 10, padB = 18;
+  const W = 400, H = 120;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  const pesos = historial.map((h) => h.pesoKg);
+  const minP = Math.min.apply(null, pesos), maxP = Math.max.apply(null, pesos);
+  const rango = (maxP - minP) || 1;
+
+  const xAt = (i) => padL + (historial.length > 1 ? (i / (historial.length - 1)) * plotW : 0);
+  const yAt = (v) => padT + (1 - (v - minP) / rango) * plotH;
+
+  const pts = historial.map((h, i) => xAt(i).toFixed(1) + ',' + yAt(h.pesoKg).toFixed(1));
+  let html = '<path d="M' + pts.join(' L') + '" fill="none" stroke="#e0a458" stroke-width="2"></path>';
+  html += '<circle cx="' + xAt(historial.length - 1).toFixed(1) + '" cy="' + yAt(historial[historial.length - 1].pesoKg).toFixed(1) + '" r="3" fill="#e0a458"></circle>';
+  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + historial[0].fecha.slice(5) + '</text>';
+  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + historial[historial.length - 1].fecha.slice(5) + '</text>';
+  html += '<text x="' + (padL - 4) + '" y="' + (padT + 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + maxP.toFixed(1) + '</text>';
+  html += '<text x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + minP.toFixed(1) + '</text>';
+  svg.innerHTML = html;
 }
 
 document.getElementById('btnGuardarPerfil').addEventListener('click', () => {
@@ -1226,6 +1256,14 @@ document.getElementById('btnGuardarPerfil').addEventListener('click', () => {
   p.edad = parseFloat(document.getElementById('uEdad').value) || null;
   p.sexo = document.getElementById('uSexo').value || null;
   p.actualizado = hoyISO();
+  if (p.pesoKg) {
+    if (!p.historialPeso) p.historialPeso = [];
+    const hoy = hoyISO();
+    const idx = p.historialPeso.findIndex((h) => h.fecha === hoy);
+    if (idx !== -1) p.historialPeso[idx].pesoKg = p.pesoKg; // ya pesaste hoy, actualiza en vez de duplicar
+    else p.historialPeso.push({ fecha: hoy, pesoKg: p.pesoKg });
+    p.historialPeso.sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+  }
   guardarPerfil(p);
   cargarFormularioPerfil();
   toast('Perfil guardado ✓');
