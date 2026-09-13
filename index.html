@@ -539,6 +539,15 @@
       <button class="primary" style="width:100%" id="btnGuardarUmbrales">Guardar umbrales</button>
       <button style="width:100%;margin-top:8px" id="btnImportarUmbrales">Traer lo que ya tengo cargado en Correr/Bici/Kayak</button>
       <p class="hint" id="umbralesActualizado" style="margin-top:6px"></p>
+      <div id="vo2GraficoWrap" style="display:none;margin-top:10px">
+        <label style="display:block;margin-bottom:4px">VO2 máx estimado — evolución</label>
+        <svg id="vo2Grafico" viewBox="0 0 400 120" style="width:100%;height:120px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
+        <div class="zoneLegend" style="margin-top:4px">
+          <span><span class="dot" style="background:#5fb88a"></span>carrera</span>
+          <span><span class="dot" style="background:#e0a458"></span>bici</span>
+        </div>
+        <p class="hint" style="margin-top:4px">Estimación de campo a partir de tus umbrales (ecuación ACSM para carrera, vatios/kg para bici) — no es una medición de laboratorio, tomalo como tendencia.</p>
+      </div>
     </div>
 
     <div class="card">
@@ -1341,6 +1350,62 @@ function cargarFormularioUmbrales() {
   document.getElementById('uRitmoNatacion').value = u.ritmoUmbralNatacion100m ? segARelojes(u.ritmoUmbralNatacion100m) : '';
   actualizarRitmoKmh();
   document.getElementById('umbralesActualizado').textContent = u.actualizado ? ('Última actualización: ' + u.actualizado) : 'Todavía no cargaste ningún umbral.';
+  dibujarGraficoVo2Max(u.historial || []);
+}
+
+// Estimaciones de campo (no medición de laboratorio) — a tomar como tendencia, no como número exacto.
+// Carrera: ritmo umbral -> velocidad umbral (km/h) -> se "des-escala" asumiendo que el umbral
+// ronda el 88% de la velocidad a VO2 máx (vVO2max), y de ahí la ecuación metabólica de
+// carrera del ACSM (VO2 ml/kg/min = 3.333×vel_kmh + 3.5, pendiente 0%).
+// Bici: aproximación de campo de vatios/kg de FTP a VO2 máx (10.8 ml/kg/min por vatio/kg + 7).
+function calcularVo2MaxEstimado(historialEntry, pesoKg) {
+  const out = {};
+  if (historialEntry.ritmoUmbralCarreraSegKm) {
+    const velUmbralKmh = 3600 / historialEntry.ritmoUmbralCarreraSegKm;
+    const vVo2maxKmh = velUmbralKmh / 0.88;
+    out.carrera = Math.round((3.333 * vVo2maxKmh + 3.5) * 10) / 10;
+  }
+  if (historialEntry.ftpBici && pesoKg) {
+    const wattsPorKg = historialEntry.ftpBici / pesoKg;
+    out.bici = Math.round((wattsPorKg * 10.8 + 7) * 10) / 10;
+  }
+  return out;
+}
+
+function dibujarGraficoVo2Max(historial) {
+  const wrap = document.getElementById('vo2GraficoWrap');
+  const perfil = leerPerfil();
+  const puntos = (historial || [])
+    .map((h) => ({ fecha: h.fecha, vo2: calcularVo2MaxEstimado(h, perfil.pesoKg) }))
+    .filter((p) => p.vo2.carrera != null || p.vo2.bici != null);
+  if (puntos.length < 2) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  const svg = document.getElementById('vo2Grafico');
+  const padL = 32, padR = 8, padT = 10, padB = 18;
+  const W = 400, H = 120;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  const valores = [];
+  puntos.forEach((p) => { if (p.vo2.carrera != null) valores.push(p.vo2.carrera); if (p.vo2.bici != null) valores.push(p.vo2.bici); });
+  const minV = Math.min.apply(null, valores), maxV = Math.max.apply(null, valores);
+  const rango = (maxV - minV) || 1;
+
+  const xAt = (i) => padL + (puntos.length > 1 ? (i / (puntos.length - 1)) * plotW : 0);
+  const yAt = (v) => padT + (1 - (v - minV) / rango) * plotH;
+
+  function linea(color, campo) {
+    const pts = [];
+    puntos.forEach((p, i) => { if (p.vo2[campo] != null) pts.push(xAt(i).toFixed(1) + ',' + yAt(p.vo2[campo]).toFixed(1)); });
+    if (pts.length < 2) return '';
+    return '<path d="M' + pts.join(' L') + '" fill="none" stroke="' + color + '" stroke-width="2"></path>';
+  }
+  let html = linea('#5fb88a', 'carrera') + linea('#e0a458', 'bici');
+  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + puntos[0].fecha.slice(5) + '</text>';
+  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + puntos[puntos.length - 1].fecha.slice(5) + '</text>';
+  html += '<text x="' + (padL - 4) + '" y="' + (padT + 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + maxV.toFixed(0) + '</text>';
+  html += '<text x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + minV.toFixed(0) + '</text>';
+  svg.innerHTML = html;
 }
 
 // Lee las claves privadas reales de Correr/Bici/Kayak (mismo origen) y precarga el
@@ -1408,15 +1473,29 @@ document.getElementById('btnEstimarPulsoBici').addEventListener('click', () => {
 });
 
 document.getElementById('btnGuardarUmbrales').addEventListener('click', () => {
-  const u = {
-    ritmoUmbralCarreraSegKm: relojASegundos(document.getElementById('uRitmoCarrera').value) || null,
-    pulsoUmbralCarrera: parseFloat(document.getElementById('uPulsoCarrera').value) || null,
-    ftpBici: parseFloat(document.getElementById('uFtpBici').value) || null,
-    pulsoUmbralKayak: parseFloat(document.getElementById('uPulsoKayak').value) || null,
-    pulsoUmbralBici: parseFloat(document.getElementById('uPulsoBici').value) || null,
-    ritmoUmbralNatacion100m: relojASegundos(document.getElementById('uRitmoNatacion').value) || null,
-    actualizado: hoyISO(),
+  const u = leerUmbrales(); // objeto completo, para no perder el historial ya acumulado
+  u.ritmoUmbralCarreraSegKm = relojASegundos(document.getElementById('uRitmoCarrera').value) || null;
+  u.pulsoUmbralCarrera = parseFloat(document.getElementById('uPulsoCarrera').value) || null;
+  u.ftpBici = parseFloat(document.getElementById('uFtpBici').value) || null;
+  u.pulsoUmbralKayak = parseFloat(document.getElementById('uPulsoKayak').value) || null;
+  u.pulsoUmbralBici = parseFloat(document.getElementById('uPulsoBici').value) || null;
+  u.ritmoUmbralNatacion100m = relojASegundos(document.getElementById('uRitmoNatacion').value) || null;
+  u.actualizado = hoyISO();
+
+  if (!u.historial) u.historial = [];
+  const hoy = hoyISO();
+  const snapshot = {
+    fecha: hoy,
+    ritmoUmbralCarreraSegKm: u.ritmoUmbralCarreraSegKm,
+    ftpBici: u.ftpBici,
+    pulsoUmbralKayak: u.pulsoUmbralKayak,
+    pulsoUmbralBici: u.pulsoUmbralBici,
+    pulsoUmbralCarrera: u.pulsoUmbralCarrera,
   };
+  const idx = u.historial.findIndex((h) => h.fecha === hoy);
+  if (idx !== -1) u.historial[idx] = snapshot; else u.historial.push(snapshot);
+  u.historial.sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+
   guardarUmbrales(u);
   cargarFormularioUmbrales();
   actualizarPlanHoy();
