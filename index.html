@@ -492,6 +492,12 @@
       <button class="primary" style="width:100%" id="btnGuardarPerfil">Guardar perfil</button>
       <p class="hint" id="perfilActualizado" style="margin-top:6px"></p>
       <div id="pesoGraficoWrap" style="display:none;margin-top:10px">
+        <div class="tabs" style="margin:0 0 8px;padding:0" id="periodoHistorialTabs">
+          <div class="vistaTab" data-periodo="dia">Día</div>
+          <div class="vistaTab" data-periodo="semana">Semana</div>
+          <div class="vistaTab active" data-periodo="mes">Mes</div>
+          <div class="vistaTab" data-periodo="anio">Año</div>
+        </div>
         <svg id="pesoGrafico" viewBox="0 0 400 120" style="width:100%;height:120px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
       </div>
     </div>
@@ -1224,6 +1230,50 @@ function guardarPerfil(p) {
   localStorage.setItem(LS_PERFIL, JSON.stringify(p));
 }
 
+let periodoHistorial = 'mes';
+
+// Agrupa una serie de historial (peso, umbrales) por semana/mes/año, promediando cada campo
+// numérico dentro del período — sin esto, un historial de meses queda ilegible punto a punto.
+function agruparHistorialPorPeriodo(historial, periodo, camposNumericos) {
+  if (periodo === 'dia' || !historial || !historial.length) return historial || [];
+  const grupos = {};
+  historial.forEach((h) => {
+    const d = new Date(h.fecha + 'T00:00:00');
+    let clave;
+    if (periodo === 'semana') {
+      const domingo = new Date(d); domingo.setDate(d.getDate() - d.getDay());
+      clave = domingo.toISOString().slice(0, 10);
+    } else if (periodo === 'mes') {
+      clave = h.fecha.slice(0, 7);
+    } else if (periodo === 'anio') {
+      clave = h.fecha.slice(0, 4);
+    } else {
+      clave = h.fecha;
+    }
+    if (!grupos[clave]) grupos[clave] = [];
+    grupos[clave].push(h);
+  });
+  return Object.keys(grupos).sort().map((clave) => {
+    const items = grupos[clave];
+    const resultado = { fecha: clave };
+    camposNumericos.forEach((campo) => {
+      const valores = items.map((it) => it[campo]).filter((v) => v != null);
+      resultado[campo] = valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : null;
+    });
+    return resultado;
+  });
+}
+
+document.querySelectorAll('#periodoHistorialTabs .vistaTab').forEach((vt) => {
+  vt.addEventListener('click', () => {
+    document.querySelectorAll('#periodoHistorialTabs .vistaTab').forEach((x) => x.classList.remove('active'));
+    vt.classList.add('active');
+    periodoHistorial = vt.dataset.periodo;
+    cargarFormularioPerfil();
+    cargarFormularioUmbrales();
+  });
+});
+
 function cargarFormularioPerfil() {
   const p = leerPerfil();
   document.getElementById('uPeso').value = p.pesoKg || '';
@@ -1233,10 +1283,23 @@ function cargarFormularioPerfil() {
   dibujarGraficoPeso(p.historialPeso || []);
 }
 
+// Formatea la etiqueta de fecha según qué tan agrupada está la serie (día/semana muestran
+// MM-DD, mes muestra el mes, año muestra el año).
+function etiquetaPeriodo(fecha, periodo) {
+  if (periodo === 'mes') {
+    const [anio, mes] = fecha.split('-');
+    return ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][parseInt(mes, 10) - 1] + ' ' + anio.slice(2);
+  }
+  if (periodo === 'anio') return fecha;
+  return fecha.slice(5);
+}
+
 function dibujarGraficoPeso(historial) {
   const wrap = document.getElementById('pesoGraficoWrap');
-  if (!historial || historial.length < 2) { wrap.style.display = 'none'; return; }
+  const agrupado = agruparHistorialPorPeriodo(historial, periodoHistorial, ['pesoKg']);
+  if (!agrupado || agrupado.length < 2) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
+  historial = agrupado;
   const svg = document.getElementById('pesoGrafico');
   const padL = 32, padR = 8, padT = 10, padB = 18;
   const W = 400, H = 120;
@@ -1252,8 +1315,8 @@ function dibujarGraficoPeso(historial) {
   const pts = historial.map((h, i) => xAt(i).toFixed(1) + ',' + yAt(h.pesoKg).toFixed(1));
   let html = '<path d="M' + pts.join(' L') + '" fill="none" stroke="#e0a458" stroke-width="2"></path>';
   html += '<circle cx="' + xAt(historial.length - 1).toFixed(1) + '" cy="' + yAt(historial[historial.length - 1].pesoKg).toFixed(1) + '" r="3" fill="#e0a458"></circle>';
-  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + historial[0].fecha.slice(5) + '</text>';
-  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + historial[historial.length - 1].fecha.slice(5) + '</text>';
+  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + etiquetaPeriodo(historial[0].fecha, periodoHistorial) + '</text>';
+  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + etiquetaPeriodo(historial[historial.length - 1].fecha, periodoHistorial) + '</text>';
   html += '<text x="' + (padL - 4) + '" y="' + (padT + 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + maxP.toFixed(1) + '</text>';
   html += '<text x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + minP.toFixed(1) + '</text>';
   svg.innerHTML = html;
@@ -1375,7 +1438,8 @@ function calcularVo2MaxEstimado(historialEntry, pesoKg) {
 function dibujarGraficoVo2Max(historial) {
   const wrap = document.getElementById('vo2GraficoWrap');
   const perfil = leerPerfil();
-  const puntos = (historial || [])
+  const agrupado = agruparHistorialPorPeriodo(historial, periodoHistorial, ['ritmoUmbralCarreraSegKm', 'ftpBici', 'pulsoUmbralKayak', 'pulsoUmbralBici', 'pulsoUmbralCarrera']);
+  const puntos = (agrupado || [])
     .map((h) => ({ fecha: h.fecha, vo2: calcularVo2MaxEstimado(h, perfil.pesoKg) }))
     .filter((p) => p.vo2.carrera != null || p.vo2.bici != null);
   if (puntos.length < 2) { wrap.style.display = 'none'; return; }
@@ -1401,8 +1465,8 @@ function dibujarGraficoVo2Max(historial) {
     return '<path d="M' + pts.join(' L') + '" fill="none" stroke="' + color + '" stroke-width="2"></path>';
   }
   let html = linea('#5fb88a', 'carrera') + linea('#e0a458', 'bici');
-  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + puntos[0].fecha.slice(5) + '</text>';
-  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + puntos[puntos.length - 1].fecha.slice(5) + '</text>';
+  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + etiquetaPeriodo(puntos[0].fecha, periodoHistorial) + '</text>';
+  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + etiquetaPeriodo(puntos[puntos.length - 1].fecha, periodoHistorial) + '</text>';
   html += '<text x="' + (padL - 4) + '" y="' + (padT + 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + maxV.toFixed(0) + '</text>';
   html += '<text x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + minV.toFixed(0) + '</text>';
   svg.innerHTML = html;
