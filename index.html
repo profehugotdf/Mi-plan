@@ -491,13 +491,14 @@
       </div>
       <button class="primary" style="width:100%" id="btnGuardarPerfil">Guardar perfil</button>
       <p class="hint" id="perfilActualizado" style="margin-top:6px"></p>
-      <div id="pesoGraficoWrap" style="display:none;margin-top:10px">
-        <div class="tabs" style="margin:0 0 8px;padding:0" id="periodoHistorialTabs">
-          <div class="vistaTab" data-periodo="dia">Día</div>
-          <div class="vistaTab" data-periodo="semana">Semana</div>
-          <div class="vistaTab active" data-periodo="mes">Mes</div>
-          <div class="vistaTab" data-periodo="anio">Año</div>
-        </div>
+      <div class="tabs" style="margin:10px 0 8px;padding:0" id="periodoHistorialTabs">
+        <div class="vistaTab" data-periodo="dia">Día</div>
+        <div class="vistaTab" data-periodo="semana">Semana</div>
+        <div class="vistaTab active" data-periodo="mes">Mes</div>
+        <div class="vistaTab" data-periodo="anio">Año</div>
+      </div>
+      <p class="hint" id="periodoHistorialAviso" style="margin-bottom:6px">Cargá al menos 2 pesadas para ver el gráfico de evolución.</p>
+      <div id="pesoGraficoWrap" style="display:none">
         <svg id="pesoGrafico" viewBox="0 0 400 120" style="width:100%;height:120px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
       </div>
     </div>
@@ -545,8 +546,19 @@
       <button class="primary" style="width:100%" id="btnGuardarUmbrales">Guardar umbrales</button>
       <button style="width:100%;margin-top:8px" id="btnImportarUmbrales">Traer lo que ya tengo cargado en Correr/Bici/Kayak</button>
       <p class="hint" id="umbralesActualizado" style="margin-top:6px"></p>
-      <div id="vo2GraficoWrap" style="display:none;margin-top:10px">
-        <label style="display:block;margin-bottom:4px">VO2 máx estimado — evolución</label>
+      <label style="display:block;margin:10px 0 4px">Ritmo umbral — Carrera (km/h)</label>
+      <p class="hint" id="ritmoGraficoAviso">Guardá el umbral de carrera al menos 2 veces (fechas o períodos distintos) para ver la evolución.</p>
+      <div id="ritmoGraficoWrap" style="display:none">
+        <svg id="ritmoGrafico" viewBox="0 0 400 100" style="width:100%;height:100px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
+      </div>
+      <label style="display:block;margin:10px 0 4px">FTP — Bici (W)</label>
+      <p class="hint" id="ftpGraficoAviso">Guardá el FTP al menos 2 veces (fechas o períodos distintos) para ver la evolución.</p>
+      <div id="ftpGraficoWrap" style="display:none">
+        <svg id="ftpGrafico" viewBox="0 0 400 100" style="width:100%;height:100px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
+      </div>
+      <label style="display:block;margin:10px 0 4px">VO2 máx estimado — evolución</label>
+      <p class="hint" id="vo2GraficoAviso">Se calcula de tu historial de umbrales — guardalo al menos 2 veces (en fechas distintas, o períodos distintos según el selector de arriba en Perfil) para ver el gráfico.</p>
+      <div id="vo2GraficoWrap" style="display:none">
         <svg id="vo2Grafico" viewBox="0 0 400 120" style="width:100%;height:120px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
         <div class="zoneLegend" style="margin-top:4px">
           <span><span class="dot" style="background:#5fb88a"></span>carrera</span>
@@ -1296,9 +1308,11 @@ function etiquetaPeriodo(fecha, periodo) {
 
 function dibujarGraficoPeso(historial) {
   const wrap = document.getElementById('pesoGraficoWrap');
+  const aviso = document.getElementById('periodoHistorialAviso');
   const agrupado = agruparHistorialPorPeriodo(historial, periodoHistorial, ['pesoKg']);
-  if (!agrupado || agrupado.length < 2) { wrap.style.display = 'none'; return; }
+  if (!agrupado || agrupado.length < 2) { wrap.style.display = 'none'; aviso.style.display = 'block'; return; }
   wrap.style.display = 'block';
+  aviso.style.display = 'none';
   historial = agrupado;
   const svg = document.getElementById('pesoGrafico');
   const padL = 32, padR = 8, padT = 10, padB = 18;
@@ -1413,6 +1427,12 @@ function cargarFormularioUmbrales() {
   document.getElementById('uRitmoNatacion').value = u.ritmoUmbralNatacion100m ? segARelojes(u.ritmoUmbralNatacion100m) : '';
   actualizarRitmoKmh();
   document.getElementById('umbralesActualizado').textContent = u.actualizado ? ('Última actualización: ' + u.actualizado) : 'Todavía no cargaste ningún umbral.';
+  const agrupadoUmbrales = agruparHistorialPorPeriodo(u.historial || [], periodoHistorial, ['ritmoUmbralCarreraSegKm', 'ftpBici']);
+  const historialConKmh = agrupadoUmbrales.map((h) => Object.assign({}, h, {
+    velUmbralKmh: h.ritmoUmbralCarreraSegKm ? Math.round((3600 / h.ritmoUmbralCarreraSegKm) * 10) / 10 : null,
+  }));
+  dibujarGraficoSimple('ritmoGraficoWrap', 'ritmoGraficoAviso', 'ritmoGrafico', historialConKmh, 'velUmbralKmh', '#5fb88a', 1);
+  dibujarGraficoSimple('ftpGraficoWrap', 'ftpGraficoAviso', 'ftpGrafico', agrupadoUmbrales, 'ftpBici', '#e0a458', 0);
   dibujarGraficoVo2Max(u.historial || []);
 }
 
@@ -1435,15 +1455,49 @@ function calcularVo2MaxEstimado(historialEntry, pesoKg) {
   return out;
 }
 
+// Gráfico de línea genérico y chico, reusado para ritmo umbral y FTP. `historial` ya viene
+// agrupado por periodoHistorial; `campo` es el nombre del valor a graficar en cada punto.
+function dibujarGraficoSimple(idWrap, idAviso, idSvg, historial, campo, color, decimales) {
+  const wrap = document.getElementById(idWrap);
+  const aviso = document.getElementById(idAviso);
+  const puntos = (historial || []).filter((h) => h[campo] != null);
+  if (puntos.length < 2) { wrap.style.display = 'none'; aviso.style.display = 'block'; return; }
+  wrap.style.display = 'block';
+  aviso.style.display = 'none';
+
+  const svg = document.getElementById(idSvg);
+  const padL = 32, padR = 8, padT = 8, padB = 16;
+  const W = 400, H = 100;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  const valores = puntos.map((p) => p[campo]);
+  const minV = Math.min.apply(null, valores), maxV = Math.max.apply(null, valores);
+  const rango = (maxV - minV) || 1;
+
+  const xAt = (i) => padL + (puntos.length > 1 ? (i / (puntos.length - 1)) * plotW : 0);
+  const yAt = (v) => padT + (1 - (v - minV) / rango) * plotH;
+
+  const pts = puntos.map((p, i) => xAt(i).toFixed(1) + ',' + yAt(p[campo]).toFixed(1));
+  let html = '<path d="M' + pts.join(' L') + '" fill="none" stroke="' + color + '" stroke-width="2"></path>';
+  html += '<circle cx="' + xAt(puntos.length - 1).toFixed(1) + '" cy="' + yAt(puntos[puntos.length - 1][campo]).toFixed(1) + '" r="3" fill="' + color + '"></circle>';
+  html += '<text x="' + padL + '" y="' + (H - 3) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + etiquetaPeriodo(puntos[0].fecha, periodoHistorial) + '</text>';
+  html += '<text x="' + (W - padR) + '" y="' + (H - 3) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + etiquetaPeriodo(puntos[puntos.length - 1].fecha, periodoHistorial) + '</text>';
+  html += '<text x="' + (padL - 4) + '" y="' + (padT + 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + maxV.toFixed(decimales) + '</text>';
+  html += '<text x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + minV.toFixed(decimales) + '</text>';
+  svg.innerHTML = html;
+}
+
 function dibujarGraficoVo2Max(historial) {
   const wrap = document.getElementById('vo2GraficoWrap');
+  const aviso = document.getElementById('vo2GraficoAviso');
   const perfil = leerPerfil();
   const agrupado = agruparHistorialPorPeriodo(historial, periodoHistorial, ['ritmoUmbralCarreraSegKm', 'ftpBici', 'pulsoUmbralKayak', 'pulsoUmbralBici', 'pulsoUmbralCarrera']);
   const puntos = (agrupado || [])
     .map((h) => ({ fecha: h.fecha, vo2: calcularVo2MaxEstimado(h, perfil.pesoKg) }))
     .filter((p) => p.vo2.carrera != null || p.vo2.bici != null);
-  if (puntos.length < 2) { wrap.style.display = 'none'; return; }
+  if (puntos.length < 2) { wrap.style.display = 'none'; aviso.style.display = 'block'; return; }
   wrap.style.display = 'block';
+  aviso.style.display = 'none';
 
   const svg = document.getElementById('vo2Grafico');
   const padL = 32, padR = 8, padT = 10, padB = 18;
