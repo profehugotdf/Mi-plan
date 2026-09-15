@@ -1536,8 +1536,33 @@ function finalizarTestHrv() {
   toast('HRV guardado ✓');
 }
 
+// Imita la lógica de "HRV Status" de Garmin: compara el promedio de los últimos 7 días
+// contra un rango normal calculado con TODO el historial ANTERIOR a esa semana — no el
+// mismo dato comparado contra sí mismo. Necesita separación clara entre "base" y "reciente".
+function calcularEstadoHrv(historialOrdenado) {
+  if (historialOrdenado.length < 14) return null; // necesito margen para separar base de reciente
+  const recientes = historialOrdenado.slice(-7);
+  const base = historialOrdenado.slice(0, historialOrdenado.length - 7);
+  if (base.length < 7) return null;
+
+  const valoresBase = base.map((h) => h.rmssdMs);
+  const media = valoresBase.reduce((a, b) => a + b, 0) / valoresBase.length;
+  const varianza = valoresBase.reduce((a, b) => a + (b - media) * (b - media), 0) / valoresBase.length;
+  const sd = Math.sqrt(varianza);
+  const rangoMin = media - sd, rangoMax = media + sd;
+
+  const promedioReciente = recientes.reduce((a, b) => a + b.rmssdMs, 0) / recientes.length;
+
+  let estado, color;
+  if (promedioReciente < media - 2 * sd) { estado = 'Bajo'; color = '#d9705a'; }
+  else if (promedioReciente < rangoMin || promedioReciente > rangoMax) { estado = 'Desequilibrado'; color = '#e0a458'; }
+  else { estado = 'Equilibrado'; color = '#5fb88a'; }
+
+  return { estado, color, media, sd, rangoMin, rangoMax, promedioReciente };
+}
+
 function renderHrv() {
-  const registro = leerHrvRegistro().filter((r) => r.rmssdMs != null && r.fecha);
+  const registro = leerHrvRegistro().filter((r) => r.rmssdMs != null && r.fecha).sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
   const aviso = document.getElementById('hrvAviso');
   const statsWrap = document.getElementById('hrvStatsWrap');
   const graficoWrap = document.getElementById('hrvGraficoWrap');
@@ -1555,23 +1580,20 @@ function renderHrv() {
 
   const conBaseline = calcularBaselineHrv(registro, 7);
   const ultimo = conBaseline[conBaseline.length - 1];
+  const estadoHrv = calcularEstadoHrv(registro);
 
-  let estadoTxt = 'sin línea de base todavía', colorEstado = '#8ea3b3';
-  if (ultimo.desviacion != null) {
-    if (ultimo.desviacion <= -1) { estadoTxt = 'por debajo de lo normal'; colorEstado = '#d9705a'; }
-    else if (ultimo.desviacion < -0.3) { estadoTxt = 'algo bajo'; colorEstado = '#e0a458'; }
-    else { estadoTxt = 'dentro de lo normal'; colorEstado = '#5fb88a'; }
-  }
+  let estadoTxt = 'todavía sin línea de base (necesita ~2 semanas)', colorEstado = '#8ea3b3';
+  if (estadoHrv) { estadoTxt = estadoHrv.estado; colorEstado = estadoHrv.color; }
 
   document.getElementById('hrvStats').innerHTML =
     '<div class="stat"><div class="v">' + Math.round(ultimo.rmssdMs) + '</div><div class="l">RMSSD hoy (ms)</div></div>' +
-    '<div class="stat"><div class="v">' + (ultimo.baseline != null ? Math.round(ultimo.baseline) : '—') + '</div><div class="l">promedio 7 días</div></div>' +
-    '<div class="stat"><div class="v" style="color:' + colorEstado + '">' + estadoTxt + '</div><div class="l">respecto a vos mismo</div></div>';
+    '<div class="stat"><div class="v">' + (estadoHrv ? Math.round(estadoHrv.promedioReciente) : '—') + '</div><div class="l">promedio 7 días</div></div>' +
+    '<div class="stat"><div class="v" style="color:' + colorEstado + '">' + estadoTxt + '</div><div class="l">estado (estilo Garmin)</div></div>';
 
-  dibujarGraficoHrv(conBaseline);
+  dibujarGraficoHrv(conBaseline, estadoHrv);
 }
 
-function dibujarGraficoHrv(historial) {
+function dibujarGraficoHrv(historial, estadoHrv) {
   const svg = document.getElementById('hrvGrafico');
   const padL = 32, padR = 8, padT = 10, padB = 18;
   const W = 400, H = 110;
@@ -1579,21 +1601,28 @@ function dibujarGraficoHrv(historial) {
 
   const valores = [];
   historial.forEach((h) => { valores.push(h.rmssdMs); if (h.baseline != null) valores.push(h.baseline); });
+  if (estadoHrv) { valores.push(estadoHrv.rangoMin, estadoHrv.rangoMax); }
   const minV = Math.min.apply(null, valores), maxV = Math.max.apply(null, valores);
   const rango = (maxV - minV) || 1;
 
   const xAt = (i) => padL + (historial.length > 1 ? (i / (historial.length - 1)) * plotW : 0);
   const yAt = (v) => padT + (1 - (v - minV) / rango) * plotH;
 
+  let html = '';
+  if (estadoHrv) {
+    const yTop = yAt(estadoHrv.rangoMax), yBottom = yAt(estadoHrv.rangoMin);
+    html += '<rect x="' + padL + '" y="' + yTop.toFixed(1) + '" width="' + plotW + '" height="' + (yBottom - yTop).toFixed(1) + '" fill="#5fb88a" opacity="0.08"></rect>';
+  }
+
   const ptsRmssd = historial.map((h, i) => xAt(i).toFixed(1) + ',' + yAt(h.rmssdMs).toFixed(1));
-  let html = '<path d="M' + ptsRmssd.join(' L') + '" fill="none" stroke="#5aa9d6" stroke-width="2"></path>';
+  html += '<path d="M' + ptsRmssd.join(' L') + '" fill="none" stroke="#5aa9d6" stroke-width="2"></path>';
 
   const ptsBase = [];
   historial.forEach((h, i) => { if (h.baseline != null) ptsBase.push(xAt(i).toFixed(1) + ',' + yAt(h.baseline).toFixed(1)); });
   if (ptsBase.length > 1) html += '<path d="M' + ptsBase.join(' L') + '" fill="none" stroke="#8ea3b3" stroke-width="1.5" stroke-dasharray="3,3"></path>';
 
   const ultimo = historial[historial.length - 1];
-  const colorUltimo = ultimo.desviacion != null && ultimo.desviacion <= -1 ? '#d9705a' : (ultimo.desviacion != null && ultimo.desviacion < -0.3 ? '#e0a458' : '#5fb88a');
+  const colorUltimo = estadoHrv ? estadoHrv.color : (ultimo.desviacion != null && ultimo.desviacion <= -1 ? '#d9705a' : (ultimo.desviacion != null && ultimo.desviacion < -0.3 ? '#e0a458' : '#5fb88a'));
   html += '<circle cx="' + xAt(historial.length - 1).toFixed(1) + '" cy="' + yAt(ultimo.rmssdMs).toFixed(1) + '" r="3.5" fill="' + colorUltimo + '"></circle>';
 
   html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + historial[0].fecha.slice(5) + '</text>';
