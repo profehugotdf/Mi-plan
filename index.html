@@ -511,6 +511,34 @@
     </div>
 
     <div class="card">
+      <h3>HRV — variabilidad de frecuencia cardíaca</h3>
+      <p style="margin-bottom:10px">Lee <span class="mono">entrenamiento_hrv_registro</span> (test de HRV en reposo, o importado del export de Garmin). Es relativo a tu propio historial — no un número que se compare entre personas.</p>
+
+      <div style="background:var(--bg-panel-2);border-radius:10px;padding:11px 12px;margin-bottom:10px">
+        <h3 style="margin-bottom:6px">Test en reposo</h3>
+        <p style="margin-bottom:8px">Acostado, apenas te despertás, quieto 3 minutos.</p>
+        <div class="btnRow">
+          <button id="btnConectarBandaHrv">Conectar banda</button>
+          <button id="btnIniciarTestHrv" disabled>Iniciar test (3 min)</button>
+        </div>
+        <p class="hint" id="hrvBandaEstado" style="margin-top:6px">Banda no conectada.</p>
+        <p class="hint" id="hrvTestInfo" style="margin-top:2px"></p>
+      </div>
+
+      <div id="hrvStatsWrap" style="display:none">
+        <div class="statGrid" id="hrvStats"></div>
+      </div>
+      <p class="hint" id="hrvAviso">Todavía no hay ningún registro de HRV cargado.</p>
+      <div id="hrvGraficoWrap" style="display:none;margin-top:8px">
+        <svg id="hrvGrafico" viewBox="0 0 400 110" style="width:100%;height:110px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
+        <div class="zoneLegend" style="margin-top:4px">
+          <span><span class="dot" style="background:#5aa9d6"></span>RMSSD diario</span>
+          <span><span class="dot" style="background:#8ea3b3"></span>promedio móvil (7 días previos)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
       <h3>Umbrales personales</h3>
       <p style="margin-bottom:10px">Se guardan en <span class="mono">entrenamiento_umbrales</span> (compartido con Correr/Bici/Kayak). Con esto, las tarjetas de "Plan de hoy" muestran ritmo/vatios/pulso objetivo, además del tiempo, para cada disciplina activa.</p>
       <div class="field">
@@ -1382,6 +1410,199 @@ function calcularCaloriasSesion(pulso, pesoKg, edadAnios, sexo, duracionMin) {
 // Recorre TODAS las sesiones reales disponibles (no solo las de hoy) y les agrega el campo
 // `calorias` en entrenamiento_forma_registro, por upsert vía id — igual que el importador de
 // Garmin. No inventa nada: si falta pulso, peso, edad o sexo, esa sesión queda sin calorías.
+/* ========================= HRV (variabilidad de frecuencia cardíaca) ========================= */
+
+const LS_HRV = 'entrenamiento_hrv_registro';
+
+function leerHrvRegistro() {
+  try { return JSON.parse(localStorage.getItem(LS_HRV)) || []; } catch (e) { return []; }
+}
+
+// Promedio móvil CAUSAL de los últimos N días ANTERIORES a cada punto (nunca incluye el
+// propio día) — es la "línea de base" de cada persona, no un número universal de HRV.
+function calcularBaselineHrv(historial, ventana) {
+  const ordenado = historial.slice().sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+  return ordenado.map((h, i) => {
+    const previos = ordenado.slice(Math.max(0, i - ventana), i);
+    if (!previos.length) return Object.assign({}, h, { baseline: null, sd: null, desviacion: null });
+    const valores = previos.map((p) => p.rmssdMs);
+    const media = valores.reduce((a, b) => a + b, 0) / valores.length;
+    const varianza = valores.reduce((a, b) => a + (b - media) * (b - media), 0) / valores.length;
+    const sd = Math.sqrt(varianza);
+    const desviacion = sd ? (h.rmssdMs - media) / sd : 0;
+    return Object.assign({}, h, { baseline: media, sd, desviacion });
+  });
+}
+
+/* ========================= TEST DE HRV EN VIVO (Web Bluetooth) ========================= */
+
+let hrvCaracteristica = null;
+let hrvRrBuffer = [];
+let hrvTestActivo = false;
+let hrvIntervaloUi = null;
+
+// Trama estándar Bluetooth SIG "Heart Rate Measurement" (0x2A37): el flag bit4 indica si trae
+// intervalos RR (en unidades de 1/1024 seg) — es el mismo dato que ya usan Correr/Kayak/Fuerza
+// para su pulso, solo que ellos descartan los RR y acá son justo lo que necesitamos.
+function parsearTramaFrecuenciaCardiaca(value) {
+  const flags = value.getUint8(0);
+  const formato16 = (flags & 0x1) !== 0;
+  const energiaPresente = (flags & 0x08) !== 0;
+  const rrPresente = (flags & 0x10) !== 0;
+  let offset = 1;
+  offset += formato16 ? 2 : 1;
+  if (energiaPresente) offset += 2;
+  const rrs = [];
+  if (rrPresente) {
+    while (offset + 1 < value.byteLength) {
+      const rrRaw = value.getUint16(offset, true);
+      offset += 2;
+      rrs.push(rrRaw * 1000 / 1024); // a milisegundos
+    }
+  }
+  return rrs;
+}
+
+function onNotificacionHrv(event) {
+  if (!hrvTestActivo) return;
+  const rrs = parsearTramaFrecuenciaCardiaca(event.target.value);
+  rrs.forEach((rrMs) => {
+    if (rrMs > 300 && rrMs < 2000) hrvRrBuffer.push(rrMs); // filtro fisiológico básico, descarta ruido
+  });
+}
+
+document.getElementById('btnConectarBandaHrv').addEventListener('click', async () => {
+  if (!navigator.bluetooth) {
+    document.getElementById('hrvBandaEstado').textContent = 'Este navegador no soporta Bluetooth web (probá en Brave/Chrome para Android).';
+    return;
+  }
+  try {
+    const device = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+    const server = await device.gatt.connect();
+    const service = await server.getPrimaryService('heart_rate');
+    hrvCaracteristica = await service.getCharacteristic('heart_rate_measurement');
+    await hrvCaracteristica.startNotifications();
+    hrvCaracteristica.addEventListener('characteristicvaluechanged', onNotificacionHrv);
+    document.getElementById('hrvBandaEstado').textContent = 'Conectada: ' + (device.name || 'banda sin nombre');
+    document.getElementById('btnIniciarTestHrv').disabled = false;
+  } catch (e) {
+    document.getElementById('hrvBandaEstado').textContent = 'No se pudo conectar: ' + e.message;
+  }
+});
+
+function calcularRmssd(rrs) {
+  if (rrs.length < 10) return null; // muy pocos intervalos para confiar en el número
+  let sumaCuadrados = 0;
+  for (let i = 1; i < rrs.length; i++) {
+    const diff = rrs[i] - rrs[i - 1];
+    sumaCuadrados += diff * diff;
+  }
+  return Math.sqrt(sumaCuadrados / (rrs.length - 1));
+}
+
+document.getElementById('btnIniciarTestHrv').addEventListener('click', () => {
+  const duracionSeg = 180;
+  hrvRrBuffer = [];
+  hrvTestActivo = true;
+  document.getElementById('btnIniciarTestHrv').disabled = true;
+  const finMs = Date.now() + duracionSeg * 1000;
+
+  hrvIntervaloUi = setInterval(() => {
+    const restante = Math.max(0, Math.round((finMs - Date.now()) / 1000));
+    document.getElementById('hrvTestInfo').textContent = 'Test en curso — quedate quieto: ' + restante + 's · RR capturados: ' + hrvRrBuffer.length;
+    if (restante <= 0) {
+      clearInterval(hrvIntervaloUi);
+      finalizarTestHrv();
+    }
+  }, 1000);
+});
+
+function finalizarTestHrv() {
+  hrvTestActivo = false;
+  document.getElementById('btnIniciarTestHrv').disabled = false;
+  const rmssd = calcularRmssd(hrvRrBuffer);
+  if (rmssd == null) {
+    document.getElementById('hrvTestInfo').textContent = 'Muy pocos datos capturados (' + hrvRrBuffer.length + ' RR) — revisá que la banda esté bien puesta y repetí.';
+    return;
+  }
+  const registro = leerHrvRegistro();
+  const hoy = hoyISO();
+  const idx = registro.findIndex((r) => r.fecha === hoy);
+  const entrada = { fecha: hoy, rmssdMs: Math.round(rmssd * 10) / 10, id: 'test_' + Date.now() };
+  if (idx !== -1) registro[idx] = entrada; else registro.push(entrada);
+  localStorage.setItem(LS_HRV, JSON.stringify(registro));
+  document.getElementById('hrvTestInfo').textContent = 'Test completo — RMSSD: ' + entrada.rmssdMs + ' ms (' + hrvRrBuffer.length + ' latidos).';
+  renderHrv();
+  toast('HRV guardado ✓');
+}
+
+function renderHrv() {
+  const registro = leerHrvRegistro().filter((r) => r.rmssdMs != null && r.fecha);
+  const aviso = document.getElementById('hrvAviso');
+  const statsWrap = document.getElementById('hrvStatsWrap');
+  const graficoWrap = document.getElementById('hrvGraficoWrap');
+
+  if (registro.length < 2) {
+    aviso.style.display = 'block';
+    aviso.textContent = registro.length ? 'Necesitás al menos 2 registros para ver tendencia.' : 'Todavía no hay ningún registro de HRV cargado.';
+    statsWrap.style.display = 'none';
+    graficoWrap.style.display = 'none';
+    return;
+  }
+  aviso.style.display = 'none';
+  statsWrap.style.display = 'block';
+  graficoWrap.style.display = 'block';
+
+  const conBaseline = calcularBaselineHrv(registro, 7);
+  const ultimo = conBaseline[conBaseline.length - 1];
+
+  let estadoTxt = 'sin línea de base todavía', colorEstado = '#8ea3b3';
+  if (ultimo.desviacion != null) {
+    if (ultimo.desviacion <= -1) { estadoTxt = 'por debajo de lo normal'; colorEstado = '#d9705a'; }
+    else if (ultimo.desviacion < -0.3) { estadoTxt = 'algo bajo'; colorEstado = '#e0a458'; }
+    else { estadoTxt = 'dentro de lo normal'; colorEstado = '#5fb88a'; }
+  }
+
+  document.getElementById('hrvStats').innerHTML =
+    '<div class="stat"><div class="v">' + Math.round(ultimo.rmssdMs) + '</div><div class="l">RMSSD hoy (ms)</div></div>' +
+    '<div class="stat"><div class="v">' + (ultimo.baseline != null ? Math.round(ultimo.baseline) : '—') + '</div><div class="l">promedio 7 días</div></div>' +
+    '<div class="stat"><div class="v" style="color:' + colorEstado + '">' + estadoTxt + '</div><div class="l">respecto a vos mismo</div></div>';
+
+  dibujarGraficoHrv(conBaseline);
+}
+
+function dibujarGraficoHrv(historial) {
+  const svg = document.getElementById('hrvGrafico');
+  const padL = 32, padR = 8, padT = 10, padB = 18;
+  const W = 400, H = 110;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  const valores = [];
+  historial.forEach((h) => { valores.push(h.rmssdMs); if (h.baseline != null) valores.push(h.baseline); });
+  const minV = Math.min.apply(null, valores), maxV = Math.max.apply(null, valores);
+  const rango = (maxV - minV) || 1;
+
+  const xAt = (i) => padL + (historial.length > 1 ? (i / (historial.length - 1)) * plotW : 0);
+  const yAt = (v) => padT + (1 - (v - minV) / rango) * plotH;
+
+  const ptsRmssd = historial.map((h, i) => xAt(i).toFixed(1) + ',' + yAt(h.rmssdMs).toFixed(1));
+  let html = '<path d="M' + ptsRmssd.join(' L') + '" fill="none" stroke="#5aa9d6" stroke-width="2"></path>';
+
+  const ptsBase = [];
+  historial.forEach((h, i) => { if (h.baseline != null) ptsBase.push(xAt(i).toFixed(1) + ',' + yAt(h.baseline).toFixed(1)); });
+  if (ptsBase.length > 1) html += '<path d="M' + ptsBase.join(' L') + '" fill="none" stroke="#8ea3b3" stroke-width="1.5" stroke-dasharray="3,3"></path>';
+
+  const ultimo = historial[historial.length - 1];
+  const colorUltimo = ultimo.desviacion != null && ultimo.desviacion <= -1 ? '#d9705a' : (ultimo.desviacion != null && ultimo.desviacion < -0.3 ? '#e0a458' : '#5fb88a');
+  html += '<circle cx="' + xAt(historial.length - 1).toFixed(1) + '" cy="' + yAt(ultimo.rmssdMs).toFixed(1) + '" r="3.5" fill="' + colorUltimo + '"></circle>';
+
+  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + historial[0].fecha.slice(5) + '</text>';
+  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + historial[historial.length - 1].fecha.slice(5) + '</text>';
+  html += '<text x="' + (padL - 4) + '" y="' + (padT + 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + maxV.toFixed(0) + '</text>';
+  html += '<text x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + minV.toFixed(0) + '</text>';
+  svg.innerHTML = html;
+}
+
 function recalcularCalorias() {
   const perfil = leerPerfil();
   if (!perfil.pesoKg || !perfil.edad || !perfil.sexo) {
@@ -3360,6 +3581,7 @@ renderHoy();
 cargarFormularioUmbrales();
 cargarFormularioPerfil();
 recalcularCalorias(); // en silencio, para capturar sesiones nuevas de las apps hermanas sin que Hugo tenga que acordarse de tocar el botón
+renderHrv();
 </script>
 </body>
 </html>
