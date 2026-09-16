@@ -3464,6 +3464,39 @@ document.getElementById('btnCancelarCiclo').addEventListener('click', () => {
   document.getElementById('formCicloCard').style.display = 'none';
 });
 
+/* ========================= PRÓXIMO EVENTO (espejo para Nutrición) ========================= */
+
+const LS_PROXIMO_EVENTO = 'entrenamiento_proximo_evento';
+
+// Espejo de solo lectura para otras apps: el evento futuro más cercano entre TODOS los ciclos
+// guardados. Una sola fuente de verdad (el evento se carga en Ciclo, acá solo se publica).
+function actualizarProximoEventoCompartido() {
+  const hoy = hoyISO();
+  const candidatos = listaCiclosOrdenados()
+    .filter((c) => c.config.eventoNombre && c.config.eventoFecha && c.config.eventoFecha >= hoy)
+    .sort((a, b) => (a.config.eventoFecha < b.config.eventoFecha ? -1 : 1));
+
+  if (!candidatos.length) {
+    localStorage.removeItem(LS_PROXIMO_EVENTO);
+    return;
+  }
+
+  const c = candidatos[0].config;
+  // disciplina "principal" del evento = la de mayor % al final del ciclo (la más representativa
+  // cerca de la fecha del evento, ya que un ciclo puede tener varias disciplinas activas)
+  let disciplinaPrincipal = null, pctMax = -1;
+  DISCIPLINAS.forEach((d) => {
+    const pct = c.disciplinas[d.key].pctFin;
+    if (pct > pctMax) { pctMax = pct; disciplinaPrincipal = d.key; }
+  });
+
+  localStorage.setItem(LS_PROXIMO_EVENTO, JSON.stringify({
+    fecha: c.eventoFecha,
+    nombreEvento: c.eventoNombre,
+    disciplina: disciplinaPrincipal,
+  }));
+}
+
 document.getElementById('btnGuardarCiclo').addEventListener('click', () => {
   cicloEnEdicion.nombre = document.getElementById('fNombre').value.trim() || 'Ciclo sin nombre';
   cicloEnEdicion.fechaInicio = document.getElementById('fFechaInicio').value;
@@ -3484,6 +3517,7 @@ document.getElementById('btnGuardarCiclo').addEventListener('click', () => {
   document.getElementById('formCicloCard').style.display = 'none';
   renderListaCiclos();
   renderHeader();
+  actualizarProximoEventoCompartido();
   toast('Ciclo guardado ✓');
 });
 
@@ -3599,6 +3633,7 @@ document.getElementById('btnBorrarCiclo').addEventListener('click', () => {
   renderHeader();
   renderListaCiclos();
   renderHoy();
+  actualizarProximoEventoCompartido();
   toast('Ciclo borrado');
 });
 
@@ -3611,6 +3646,7 @@ cargarFormularioUmbrales();
 cargarFormularioPerfil();
 recalcularCalorias(); // en silencio, para capturar sesiones nuevas de las apps hermanas sin que Hugo tenga que acordarse de tocar el botón
 renderHrv();
+actualizarProximoEventoCompartido();
 </script>
 </body>
 </html>
