@@ -149,6 +149,13 @@
   .sesionCard .nombre{font-weight:700;font-size:0.85rem;display:flex;align-items:center;margin-bottom:5px;}
   .sesionCard .estructura{font-family:var(--mono);font-size:0.92rem;font-weight:700;color:var(--accent);}
   .sesionCard .totalizado{font-family:var(--mono);font-size:0.72rem;color:var(--text-dim);margin-top:2px;}
+
+  .senalRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+  .senalRow:last-child{border-bottom:none;}
+  .senalRow .punto{width:10px;height:10px;border-radius:50%;flex:none;}
+  .senalRow .txt{flex:1;font-size:0.85rem;}
+  .senalRow .txt b{display:block;font-size:0.9rem;}
+  .senalRow .txt span{color:var(--text-dim);font-size:0.75rem;}
   .sesionCard .targets{font-family:var(--mono);font-size:0.74rem;color:var(--accent);margin-top:3px;}
 
   .zonaCard{border-radius:10px;background:var(--bg-panel-2);padding:11px 12px;margin-bottom:8px;}
@@ -217,6 +224,12 @@
 
   <!-- PLAN DE HOY -->
   <section class="panel active" id="panel-hoy">
+    <div class="card" id="readinessCard">
+      <h3>¿Cómo estoy hoy?</h3>
+      <div id="readinessVeredicto" style="font-weight:700;font-size:1rem;margin:4px 0 10px"></div>
+      <div id="readinessSenales"></div>
+      <p class="hint" style="margin-top:8px">Cruza HRV, Forma (TSB) y Nutrición del día — no es un score inventado, son las tres señales que ya tenés, juntas. Cada una queda "sin datos" si todavía no la cargaste.</p>
+    </div>
     <div id="hoyEmpty" class="empty" style="display:none">
       <div class="big">📋</div>
       <p>Todavía no armaste ningún ciclo.<br>Andá a la pestaña <b>Ciclo</b> para crear el primero.</p>
@@ -1533,6 +1546,7 @@ function finalizarTestHrv() {
   localStorage.setItem(LS_HRV, JSON.stringify(registro));
   document.getElementById('hrvTestInfo').textContent = 'Test completo — RMSSD: ' + entrada.rmssdMs + ' ms (' + hrvRrBuffer.length + ' latidos).';
   renderHrv();
+  renderReadinessHoy();
   toast('HRV guardado ✓');
 }
 
@@ -3050,7 +3064,67 @@ function hoyISO() {
   return new Date(d - tz).toISOString().slice(0, 10);
 }
 
+/* ========================= READINESS DE HOY (cruce HRV + Forma + Nutrición) ========================= */
+
+const COLOR_NIVEL = { rojo: '#d9705a', amarillo: '#e0a458', verde: '#5fb88a', gris: '#8ea3b3' };
+
+function calcularReadinessHoy() {
+  const hoy = hoyISO();
+  const senales = [];
+
+  // HRV: usa la misma clasificación estilo Garmin ya armada
+  const registroHrv = leerHrvRegistro().filter((r) => r.rmssdMs != null && r.fecha).sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+  const estadoHrv = calcularEstadoHrv(registroHrv);
+  if (estadoHrv) {
+    const nivel = estadoHrv.estado === 'Bajo' ? 'rojo' : (estadoHrv.estado === 'Desequilibrado' ? 'amarillo' : 'verde');
+    senales.push({ label: 'HRV', detalle: estadoHrv.estado, nivel });
+  } else {
+    senales.push({ label: 'HRV', detalle: 'sin datos suficientes (necesita ~2 semanas)', nivel: 'gris' });
+  }
+
+  // Forma (TSB de hoy): mismas bandas que ya usa la Proyección de Forma
+  const registroForma = leerRegistroForma();
+  const estadoForma = calcularEstadoActual(registroForma, hoy);
+  let nivelTsb = 'gris', detalleTsb = 'sin historial de Forma';
+  if (estadoForma.tieneDatos) {
+    const tsb = Math.round(estadoForma.tsb);
+    if (tsb < -30) { nivelTsb = 'rojo'; detalleTsb = 'TSB ' + tsb + ' — zona de riesgo'; }
+    else if (tsb < 5) { nivelTsb = 'amarillo'; detalleTsb = 'TSB ' + tsb + ' — todavía cargado'; }
+    else { nivelTsb = 'verde'; detalleTsb = 'TSB ' + tsb + ' — fresco'; }
+  }
+  senales.push({ label: 'Forma', detalle: detalleTsb, nivel: nivelTsb });
+
+  // Nutrición: mismo cruce carga-alta + déficit que ya usa el Calendario
+  const nut = nutricionDia(hoy);
+  let nivelNut = 'gris', detalleNut = 'sin datos de Nutrición hoy';
+  if (nut && nut.balance != null) {
+    if (esDiaDeRiesgo(hoy, umbralTssAlto())) { nivelNut = 'rojo'; detalleNut = 'carga alta + déficit calórico'; }
+    else { nivelNut = 'verde'; detalleNut = 'balance ' + (nut.balance > 0 ? '+' : '') + Math.round(nut.balance); }
+  }
+  senales.push({ label: 'Nutrición', detalle: detalleNut, nivel: nivelNut });
+
+  let veredicto = 'verde';
+  if (senales.some((s) => s.nivel === 'rojo')) veredicto = 'rojo';
+  else if (senales.some((s) => s.nivel === 'amarillo')) veredicto = 'amarillo';
+
+  return { veredicto, senales };
+}
+
+function renderReadinessHoy() {
+  const r = calcularReadinessHoy();
+  const textoVeredicto = { rojo: '🔴 Precaución', amarillo: '🟡 Atención', verde: '🟢 Normal' }[r.veredicto];
+  const el = document.getElementById('readinessVeredicto');
+  el.textContent = textoVeredicto;
+  el.style.color = COLOR_NIVEL[r.veredicto];
+
+  document.getElementById('readinessSenales').innerHTML = r.senales.map((s) =>
+    '<div class="senalRow"><span class="punto" style="background:' + COLOR_NIVEL[s.nivel] + '"></span>' +
+    '<div class="txt"><b>' + s.label + '</b><span>' + s.detalle + '</span></div></div>'
+  ).join('');
+}
+
 function renderHoy() {
+  renderReadinessHoy();
   const hayCiclos = Object.keys(store.ciclos).length > 0;
   document.getElementById('hoyEmpty').style.display = hayCiclos ? 'none' : 'block';
   document.getElementById('hoyContent').style.display = hayCiclos ? 'block' : 'none';
