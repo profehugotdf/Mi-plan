@@ -444,7 +444,7 @@
 
     <div class="card">
       <h3>Tiempo por sesión — evolución semanal</h3>
-      <p style="margin-bottom:8px">Minutos por sesión de cada disciplina, semana a semana, ajustados por la curva y el %carga de esa semana. Deslizá para ver todo el ciclo.</p>
+      <p style="margin-bottom:8px">Minutos por sesión de cada disciplina, semana a semana, ajustados por la curva y el %carga de esa semana. La línea blanca sobre cada barra es el promedio real de esa semana, si hay sesiones registradas. Deslizá para ver todo el ciclo.</p>
       <div id="graficoCicloEmpty" class="empty" style="display:none">
         <div class="big">📈</div>
         <p>Armá un ciclo primero, en la pestaña Ciclo.</p>
@@ -2592,6 +2592,7 @@ function renderGraficoCiclo() {
   const overridesCiclo = overridesAll[store.activoId] || {};
   const configConOverrides = Object.assign({}, config, { cargaOverrides: overridesCiclo });
   const semanas = Math.max(1, Math.round(config.totalDias / 7));
+  const sesionesReales = leerSesionesCrudas();
 
   const datosSemana = [];
   for (let w = 0; w < semanas; w++) {
@@ -2599,7 +2600,23 @@ function renderGraficoCiclo() {
     const fecha = new Date(config.fechaInicio + 'T00:00:00');
     fecha.setDate(fecha.getDate() + diaRepresentativo - 1);
     const iso = fecha.toISOString().slice(0, 10);
-    datosSemana.push(calcularDia(configConOverrides, iso));
+    const r = calcularDia(configConOverrides, iso);
+
+    // rango real de esta semana del ciclo (7 días desde su inicio), para promediar sesiones reales
+    const inicioSemana = new Date(config.fechaInicio + 'T00:00:00');
+    inicioSemana.setDate(inicioSemana.getDate() + w * 7);
+    const finSemana = new Date(inicioSemana);
+    finSemana.setDate(finSemana.getDate() + 6);
+    const inicioISO = inicioSemana.toISOString().slice(0, 10);
+    const finISO = finSemana.toISOString().slice(0, 10);
+
+    const real = {};
+    DISCIPLINAS.forEach((d) => {
+      const sesionesDisc = sesionesReales.filter((s) => s.deporte === d.key && s.fecha >= inicioISO && s.fecha <= finISO);
+      real[d.key] = sesionesDisc.length ? sesionesDisc.reduce((acc, s) => acc + s.duracionSeg, 0) / sesionesDisc.length : null;
+    });
+    r.real = real;
+    datosSemana.push(r);
   }
 
   dibujarGraficoCiclo(datosSemana);
@@ -2607,7 +2624,7 @@ function renderGraficoCiclo() {
   const leyenda = document.getElementById('graficoCicloLeyenda');
   leyenda.innerHTML = DISCIPLINAS.map((d) =>
     '<span><span class="dot" style="background:' + COLOR_DISCIPLINA[d.key] + '"></span>' + d.label + '</span>'
-  ).join('');
+  ).join('') + '<span><span class="dot" style="background:#e7edf2"></span>real (línea)</span>';
 }
 
 function dibujarGraficoCiclo(datosSemana) {
@@ -2623,7 +2640,10 @@ function dibujarGraficoCiclo(datosSemana) {
 
   let maxMin = 1;
   datosSemana.forEach((r) => {
-    DISCIPLINAS.forEach((d) => { maxMin = Math.max(maxMin, r.disciplinas[d.key].tiempoSesionSeg / 60); });
+    DISCIPLINAS.forEach((d) => {
+      maxMin = Math.max(maxMin, r.disciplinas[d.key].tiempoSesionSeg / 60);
+      if (r.real && r.real[d.key] != null) maxMin = Math.max(maxMin, r.real[d.key] / 60);
+    });
   });
   maxMin = Math.ceil(maxMin / 10) * 10 || 10;
 
@@ -2642,7 +2662,14 @@ function dibujarGraficoCiclo(datosSemana) {
       const h = (min / maxMin) * plotH;
       const x = gx + j * (barW + gap);
       const y = padT + plotH - h;
-      html += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW + '" height="' + h.toFixed(1) + '" fill="' + COLOR_DISCIPLINA[d.key] + '"><title>' + d.label + ' · semana ' + (i + 1) + ': ' + Math.round(min) + ' min</title></rect>';
+      html += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW + '" height="' + h.toFixed(1) + '" fill="' + COLOR_DISCIPLINA[d.key] + '"><title>' + d.label + ' planeado · semana ' + (i + 1) + ': ' + Math.round(min) + ' min</title></rect>';
+
+      const realSeg = r.real && r.real[d.key];
+      if (realSeg != null) {
+        const realMin = realSeg / 60;
+        const yReal = padT + plotH - (realMin / maxMin) * plotH;
+        html += '<line x1="' + x.toFixed(1) + '" y1="' + yReal.toFixed(1) + '" x2="' + (x + barW).toFixed(1) + '" y2="' + yReal.toFixed(1) + '" stroke="#e7edf2" stroke-width="1.5"><title>' + d.label + ' real · semana ' + (i + 1) + ': ' + Math.round(realMin) + ' min</title></line>';
+      }
     });
     if (i % 4 === 0 || i === datosSemana.length - 1) {
       html += '<text x="' + (gx + 12) + '" y="' + (padT + plotH + 14) + '" text-anchor="middle" font-size="9" fill="#8ea3b3" font-family="monospace">' + (i + 1) + '</text>';
