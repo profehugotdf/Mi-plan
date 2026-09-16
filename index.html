@@ -457,7 +457,13 @@
 
     <div class="card">
       <h3>Proyección de Forma (CTL/ATL/TSB)</h3>
-      <p style="margin-bottom:8px">Estima aptitud (CTL), fatiga (ATL) y forma (TSB) a partir del tiempo planeado y el %pulso máx de cada semana como referencia de intensidad. Arranca de tu Forma real combinada y proyecta hacia adelante, atravesando todos los ciclos guardados en orden, uno tras otro.</p>
+      <p style="margin-bottom:8px">Estima aptitud (CTL), fatiga (ATL) y forma (TSB) a partir del tiempo planeado y el %pulso máx de cada semana como referencia de intensidad. Arranca de tu Forma real combinada (hasta un año hacia atrás) y proyecta hacia adelante, atravesando todos los ciclos guardados en orden, uno tras otro.</p>
+      <div class="tabs" style="margin:0 0 8px;padding:0" id="periodoFormaTabs">
+        <div class="vistaTab" data-periodo="dia">Día</div>
+        <div class="vistaTab active" data-periodo="semana">Semana</div>
+        <div class="vistaTab" data-periodo="mes">Mes</div>
+        <div class="vistaTab" data-periodo="anio">Año</div>
+      </div>
       <div id="formaEmpty" class="empty" style="display:none">
         <div class="big">📉</div>
         <p>Armá un ciclo primero, en la pestaña Ciclo.</p>
@@ -813,7 +819,7 @@ function calcularEstadoActual(registro, hastaISO) {
   const fechas = Object.keys(porDia);
   const hasta = new Date(hastaISO + 'T00:00:00');
   const ventanaMin = new Date(hasta);
-  ventanaMin.setDate(ventanaMin.getDate() - 90); // no hace falta ir más atrás: a 90 días el EWMA ya convergió
+  ventanaMin.setDate(ventanaMin.getDate() - 400); // margen sobre un año completo, para poder mostrar la curva larga
   let inicio = fechas.length ? new Date(fechas.reduce((a, b) => (a < b ? a : b)) + 'T00:00:00') : hasta;
   if (inicio < ventanaMin) inicio = ventanaMin;
 
@@ -2646,6 +2652,26 @@ function dibujarGraficoCiclo(datosSemana) {
   svg.innerHTML = html;
 }
 
+let periodoForma = 'semana';
+
+function claveDePeriodo(fechaISO, periodo) {
+  if (periodo === 'dia') return fechaISO;
+  const d = new Date(fechaISO + 'T00:00:00');
+  if (periodo === 'semana') { const dom = new Date(d); dom.setDate(d.getDate() - d.getDay()); return dom.toISOString().slice(0, 10); }
+  if (periodo === 'mes') return fechaISO.slice(0, 7);
+  if (periodo === 'anio') return fechaISO.slice(0, 4);
+  return fechaISO;
+}
+
+document.querySelectorAll('#periodoFormaTabs .vistaTab').forEach((vt) => {
+  vt.addEventListener('click', () => {
+    document.querySelectorAll('#periodoFormaTabs .vistaTab').forEach((x) => x.classList.remove('active'));
+    vt.classList.add('active');
+    periodoForma = vt.dataset.periodo;
+    renderProyeccionForma();
+  });
+});
+
 function renderProyeccionForma() {
   const hayCiclos = listaCiclosOrdenados().length > 0;
   const empty = document.getElementById('formaEmpty');
@@ -2662,10 +2688,18 @@ function renderProyeccionForma() {
   const registro = leerRegistroForma();
   const estado = calcularEstadoActual(registro, hoy);
   const futuros = proyectarFormaTemporada(hoy, estado.ctl, estado.atl);
-  const puntos = estado.serie.concat(futuros);
+  const puntos = estado.serie.concat(futuros); // crudo, día a día — para stats y eventos, que necesitan fecha exacta
   const idxHoy = estado.serie.length - 1;
 
-  dibujarGraficoForma(puntos, idxHoy);
+  // Para el gráfico en sí, agrupado si corresponde — un año día a día sería ilegible.
+  let puntosGrafico = puntos, idxHoyGrafico = idxHoy;
+  if (periodoForma !== 'dia') {
+    puntosGrafico = agruparHistorialPorPeriodo(puntos, periodoForma, ['ctl', 'atl', 'tsb']);
+    const claveHoy = claveDePeriodo(hoy, periodoForma);
+    idxHoyGrafico = puntosGrafico.findIndex((p) => p.fecha === claveHoy);
+    if (idxHoyGrafico === -1) idxHoyGrafico = puntosGrafico.length - 1;
+  }
+  dibujarGraficoForma(puntosGrafico, idxHoyGrafico);
 
   const ctlFinal = puntos[puntos.length - 1].ctl;
   const tsbMinPt = puntos.reduce((min, p) => (p.tsb < min.tsb ? p : min), puntos[0]);
