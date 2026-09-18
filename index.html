@@ -641,6 +641,13 @@
     </div>
 
     <div class="card">
+      <h3>Diagnóstico</h3>
+      <p style="margin-bottom:10px">Lo que esta app tiene guardado ahora mismo, sin necesitar consola de desarrollador.</p>
+      <p class="hint" id="diagProximoEvento" style="font-family:var(--mono);white-space:pre-wrap"></p>
+      <button class="small" id="btnRefrescarDiagnostico">Actualizar</button>
+    </div>
+
+    <div class="card">
       <h3>Backup completo — todas las apps</h3>
       <p style="margin-bottom:10px">Exporta TODO lo que haya en el almacenamiento de este navegador — Correr, Bici, Kayak, Fuerza, Plan de Ciclos, lo que sea — en un solo archivo. Para restaurar una app entera después de perder el dispositivo, o antes de borrar algo grande.</p>
       <div class="btnRow">
@@ -3772,6 +3779,24 @@ document.getElementById('btnBorrarCiclo').addEventListener('click', () => {
   toast('Ciclo borrado');
 });
 
+/* ========================= DIAGNÓSTICO (para no depender de consola de desarrollador) ========================= */
+
+function renderDiagnostico() {
+  const el = document.getElementById('diagProximoEvento');
+  const crudo = localStorage.getItem(LS_PROXIMO_EVENTO);
+  if (crudo === null) {
+    el.textContent = 'entrenamiento_proximo_evento: (no existe — sin evento futuro cargado en ningún ciclo)';
+    return;
+  }
+  try {
+    const obj = JSON.parse(crudo);
+    el.textContent = 'entrenamiento_proximo_evento:\n' + JSON.stringify(obj, null, 2);
+  } catch (e) {
+    el.textContent = 'entrenamiento_proximo_evento (valor crudo, no es JSON válido): ' + crudo;
+  }
+}
+document.getElementById('btnRefrescarDiagnostico').addEventListener('click', renderDiagnostico);
+
 /* ========================= INIT ========================= */
 
 renderHeader();
@@ -3782,6 +3807,7 @@ cargarFormularioPerfil();
 recalcularCalorias(); // en silencio, para capturar sesiones nuevas de las apps hermanas sin que Hugo tenga que acordarse de tocar el botón
 renderHrv();
 actualizarProximoEventoCompartido();
+renderDiagnostico();
 </script>
 </body>
 </html>
