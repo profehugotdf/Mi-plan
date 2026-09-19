@@ -3152,6 +3152,19 @@ function calcularReadinessHoy() {
   if (estadoHrv) {
     const nivel = estadoHrv.estado === 'Bajo' ? 'rojo' : (estadoHrv.estado === 'Desequilibrado' ? 'amarillo' : 'verde');
     senales.push({ label: 'HRV', detalle: estadoHrv.estado, nivel });
+  } else if (registroHrv.length >= 2) {
+    // Todavía no hay línea de base larga (14+ días) para la clasificación estilo Garmin, pero
+    // sí alcanza para comparar hoy contra el promedio de los últimos 7 días — más ruidoso,
+    // pero mejor que nada mientras se arma el historial completo.
+    const conBaseline = calcularBaselineHrv(registroHrv, 7);
+    const ultimo = conBaseline[conBaseline.length - 1];
+    if (ultimo.desviacion != null) {
+      const nivel = ultimo.desviacion <= -1 ? 'rojo' : (ultimo.desviacion < -0.3 ? 'amarillo' : 'verde');
+      const etiqueta = nivel === 'rojo' ? 'Bajo' : (nivel === 'amarillo' ? 'Algo bajo' : 'Normal');
+      senales.push({ label: 'HRV', detalle: etiqueta + ' (provisorio, pocos días todavía)', nivel });
+    } else {
+      senales.push({ label: 'HRV', detalle: 'sin datos suficientes (necesita ~2 semanas)', nivel: 'gris' });
+    }
   } else {
     senales.push({ label: 'HRV', detalle: 'sin datos suficientes (necesita ~2 semanas)', nivel: 'gris' });
   }
