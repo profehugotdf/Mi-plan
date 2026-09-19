@@ -3250,14 +3250,23 @@ function colorCumplimiento(ratio) {
 }
 
 // Suma la duración real de un día+disciplina puntual, leyendo directo de correr_sesiones/
-// bici_sesiones/kayak_sesiones (mismas que usa el Calendario). Fuerza y natación quedan afuera
-// por ahora: no tengo confirmado el esquema real de fuerza_sesiones ni existe una app de natación.
+// bici_sesiones/kayak_sesiones/fuerza_sesiones (mismas que usa el Calendario). Natación queda
+// afuera por ahora: no existe una app de natación todavía.
 function duracionRealDia(fechaISO, discKey) {
   const mapaDisc = { carrera: 'carrera', bici: 'bici', kayak: 'kayak', fuerza: 'fuerza' };
   if (!mapaDisc[discKey]) return null;
   const sesiones = leerSesionesCrudas().filter((s) => s.fecha === fechaISO && s.deporte === discKey);
   if (!sesiones.length) return 0;
   return sesiones.reduce((acc, s) => acc + (s.duracionSeg || 0), 0);
+}
+
+// ¿Hay alguna sesión real de esta disciplina ese día, sin importar si estaba planeada? Se usa
+// para prender el toggle solo aunque no coincida con el horario asignado.
+function tieneSesionRealDia(fechaISO, discKey) {
+  const real = duracionRealDia(fechaISO, discKey);
+  if (real !== null) return real > 0;
+  const tss = tssRealDiaRegistroCompartido(fechaISO, discKey);
+  return tss !== null && tss > 0;
 }
 
 // Para disciplinas sin esquema de sesión confirmado (hoy: Natación, sin app todavía) — no puedo comparar duración,
@@ -3301,8 +3310,9 @@ function actualizarPlanHoy() {
     const dd = r.disciplinas[d.key];
     const horario = config.disciplinas[d.key].horario || [];
     // Si ya asignaste días de la semana a esta disciplina, el default respeta eso (¿hoy es
-    // uno de esos días?) en vez de prenderse siempre que haya sesiones/semana > 0.
-    const defaultActiva = horario.length ? horario.some((h) => h.dia === diaSemanaFecha) : dd.sesionesSemana > 0;
+    // uno de esos días?) en vez de prenderse siempre que haya sesiones/semana > 0 — pero si
+    // hiciste algo ese día aunque no estuviera planeado, se prende igual.
+    const defaultActiva = (horario.length ? horario.some((h) => h.dia === diaSemanaFecha) : dd.sesionesSemana > 0) || tieneSesionRealDia(fechaISO, d.key);
     const activa = discActivas[fechaISO][d.key] !== undefined ? discActivas[fechaISO][d.key] : defaultActiva;
     discActivas[fechaISO][d.key] = activa;
 
