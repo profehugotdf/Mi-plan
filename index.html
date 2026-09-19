@@ -180,6 +180,7 @@
   .calDia.fuera{opacity:0.28;}
   .calDia.hoy{outline:2px solid var(--accent);outline-offset:-1px;}
   .calDia.riesgo{background:rgba(217,112,90,0.18);border-color:#d9705a;}
+  .calDia.evento{background:rgba(224,164,88,0.22);border:2px solid #e0a458;}
   .calDia .num{font-size:0.64rem;color:var(--text-dim);font-family:var(--mono);}
   .calDia .dots{display:flex;flex-wrap:wrap;gap:1.5px;justify-content:center;margin-top:3px;min-height:6px;}
   .calDia .dots span{width:5px;height:5px;border-radius:50%;}
@@ -293,6 +294,7 @@
         <div class="zoneLegend" style="margin-top:10px">
           <span><span class="dot" style="background:#8ea3b3"></span>real (entrenado)</span>
           <span><span class="dot" style="background:transparent;border:1px solid #8ea3b3"></span>planeado</span>
+          <span>🏁 día del evento</span>
         </div>
         <p class="hint" style="margin-top:6px">Tocá un día para ver el detalle. Lo planeado depende de los días de la semana que le asignaste a cada disciplina, en Ciclo.</p>
       </div>
@@ -2140,10 +2142,12 @@ function renderCalendario() {
     }
 
     const riesgo = !esFuturo && esDiaDeRiesgo(iso, umbral);
+    const cicloDelEvento = listaCiclosOrdenados().find((c) => c.config.eventoFecha === iso);
 
     const div = document.createElement('div');
-    div.className = 'calDia' + (esDelMes ? '' : ' fuera') + (iso === hoy ? ' hoy' : '') + (riesgo ? ' riesgo' : '');
-    div.innerHTML = '<div class="num">' + d.getDate() + (riesgo ? ' ⚠️' : '') + '</div><div class="dots">' + dotsHtml + '</div>';
+    div.className = 'calDia' + (esDelMes ? '' : ' fuera') + (iso === hoy ? ' hoy' : '') + (riesgo ? ' riesgo' : '') + (cicloDelEvento ? ' evento' : '');
+    div.innerHTML = '<div class="num">' + d.getDate() + (riesgo ? ' ⚠️' : '') + (cicloDelEvento ? ' 🏁' : '') + '</div><div class="dots">' + dotsHtml + '</div>';
+    if (cicloDelEvento) div.title = cicloDelEvento.config.eventoNombre;
     div.addEventListener('click', () => mostrarDetalleDia(iso, porDia[iso]));
     body.appendChild(div);
   }
