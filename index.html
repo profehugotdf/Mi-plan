@@ -2005,13 +2005,15 @@ function leerSesionesCrudas() {
       tss: s.tss || 0, id: s.id || null,
     });
   });
-  // Fuerza: campos NO confirmados contra el archivo real (no lo tengo cargado en esta
-  // conversación) — asumidos por analogía con el resto. Si algo no calza, avisar para ajustar.
+  // Fuerza: confirmado contra el archivo real (index_fuerza_16.html). Guarda fecha=hoyISO()
+  // como texto plano 'YYYY-MM-DD' SIN hora — a diferencia de Correr/Bici/Kayak. Pasarla por
+  // fechaLocalISO()/horaDeFecha() la interpretaba como medianoche UTC y la corría un día para
+  // atrás. Se usa tal cual, sin conversión, y sin hora (no existe ese dato en Fuerza).
   tryParse('fuerza_sesiones').forEach((s) => {
     if (!s.fecha) return;
     const duracionSeg = s.duracionSeg != null ? s.duracionSeg : (s.duracionMin != null ? s.duracionMin * 60 : 0);
     out.push({
-      deporte: 'fuerza', fecha: fechaLocalISO(s.fecha), horaInicio: horaDeFecha(s.fecha),
+      deporte: 'fuerza', fecha: String(s.fecha).slice(0, 10), horaInicio: null,
       duracionSeg, distanciaM: null,
       ritmoSegKm: null, watts: null, pulso: s.pulsoPromedio || null,
       tss: s.tss || 0, id: s.id || null,
@@ -2296,7 +2298,7 @@ function guardarAjusteSemana(bloque, diaNuevo, horaNueva) {
 }
 
 // Disciplinas sin app propia que aporte datos reales — se confirman a mano tocando el bloque.
-const DISCIPLINAS_SIN_SENSOR = ['fuerza', 'natacion'];
+const DISCIPLINAS_SIN_SENSOR = ['natacion'];
 const LS_CUMPLIMIENTO_MANUAL = 'plan_cumplimiento_manual_v1';
 
 function leerCumplimientoManual() {
@@ -3234,14 +3236,14 @@ function colorCumplimiento(ratio) {
 // bici_sesiones/kayak_sesiones (mismas que usa el Calendario). Fuerza y natación quedan afuera
 // por ahora: no tengo confirmado el esquema real de fuerza_sesiones ni existe una app de natación.
 function duracionRealDia(fechaISO, discKey) {
-  const mapaDisc = { carrera: 'carrera', bici: 'bici', kayak: 'kayak' };
+  const mapaDisc = { carrera: 'carrera', bici: 'bici', kayak: 'kayak', fuerza: 'fuerza' };
   if (!mapaDisc[discKey]) return null;
   const sesiones = leerSesionesCrudas().filter((s) => s.fecha === fechaISO && s.deporte === discKey);
   if (!sesiones.length) return 0;
   return sesiones.reduce((acc, s) => acc + (s.duracionSeg || 0), 0);
 }
 
-// Para disciplinas sin esquema de sesión confirmado (Fuerza): no puedo comparar duración,
+// Para disciplinas sin esquema de sesión confirmado (hoy: Natación, sin app todavía) — no puedo comparar duración,
 // pero Fuerza sí escribe a entrenamiento_forma_registro, así que uso eso como señal de "se hizo".
 function tssRealDiaRegistroCompartido(fechaISO, discKey) {
   const registro = leerRegistroForma();
@@ -3277,9 +3279,14 @@ function actualizarPlanHoy() {
   listEl.innerHTML = '';
   const hoy = hoyISO();
   const yaPaso = fechaISO <= hoy;
+  const diaSemanaFecha = new Date(fechaISO + 'T00:00:00').getDay();
   DISCIPLINAS.forEach((d) => {
     const dd = r.disciplinas[d.key];
-    const activa = discActivas[fechaISO][d.key] !== undefined ? discActivas[fechaISO][d.key] : dd.sesionesSemana > 0;
+    const horario = config.disciplinas[d.key].horario || [];
+    // Si ya asignaste días de la semana a esta disciplina, el default respeta eso (¿hoy es
+    // uno de esos días?) en vez de prenderse siempre que haya sesiones/semana > 0.
+    const defaultActiva = horario.length ? horario.some((h) => h.dia === diaSemanaFecha) : dd.sesionesSemana > 0;
+    const activa = discActivas[fechaISO][d.key] !== undefined ? discActivas[fechaISO][d.key] : defaultActiva;
     discActivas[fechaISO][d.key] = activa;
 
     const card = document.createElement('div');
