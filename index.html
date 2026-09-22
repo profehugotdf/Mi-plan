@@ -552,10 +552,12 @@
       <p class="hint" id="hrvAviso">Todavía no hay ningún registro de HRV cargado.</p>
       <div id="hrvGraficoWrap" style="display:none;margin-top:8px">
         <svg id="hrvGrafico" viewBox="0 0 400 110" style="width:100%;height:110px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
+        <p class="hint" id="hrvCursorInfo" style="margin-top:4px;font-family:var(--mono)"></p>
         <div class="zoneLegend" style="margin-top:4px">
           <span><span class="dot" style="background:#5aa9d6"></span>RMSSD diario</span>
           <span><span class="dot" style="background:#8ea3b3"></span>promedio móvil (7 días previos)</span>
         </div>
+        <p class="hint" style="margin-top:2px">Tocá y arrastrá sobre el gráfico para ver el pulso y HRV de cualquier día.</p>
       </div>
     </div>
 
@@ -1553,13 +1555,15 @@ function finalizarTestHrv() {
     document.getElementById('hrvTestInfo').textContent = 'Muy pocos datos capturados (' + hrvRrBuffer.length + ' RR) — revisá que la banda esté bien puesta y repetí.';
     return;
   }
+  const rrPromedioMs = hrvRrBuffer.reduce((a, b) => a + b, 0) / hrvRrBuffer.length;
+  const pulsoPromedio = Math.round(60000 / rrPromedioMs);
   const registro = leerHrvRegistro();
   const hoy = hoyISO();
   const idx = registro.findIndex((r) => r.fecha === hoy);
-  const entrada = { fecha: hoy, rmssdMs: Math.round(rmssd * 10) / 10, id: 'test_' + Date.now() };
+  const entrada = { fecha: hoy, rmssdMs: Math.round(rmssd * 10) / 10, pulsoPromedio, id: 'test_' + Date.now() };
   if (idx !== -1) registro[idx] = entrada; else registro.push(entrada);
   localStorage.setItem(LS_HRV, JSON.stringify(registro));
-  document.getElementById('hrvTestInfo').textContent = 'Test completo — RMSSD: ' + entrada.rmssdMs + ' ms (' + hrvRrBuffer.length + ' latidos).';
+  document.getElementById('hrvTestInfo').textContent = 'Test completo — RMSSD: ' + entrada.rmssdMs + ' ms · ' + pulsoPromedio + ' lpm (' + hrvRrBuffer.length + ' latidos).';
   renderHrv();
   renderReadinessHoy();
   toast('HRV guardado ✓');
@@ -1658,7 +1662,50 @@ function dibujarGraficoHrv(historial, estadoHrv) {
   html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + historial[historial.length - 1].fecha.slice(5) + '</text>';
   html += '<text x="' + (padL - 4) + '" y="' + (padT + 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + maxV.toFixed(0) + '</text>';
   html += '<text x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + minV.toFixed(0) + '</text>';
+
+  // cursor arrastrable — arranca en el último punto, se desliza para ver cualquier día
+  const xUlt = xAt(historial.length - 1);
+  html += '<line id="hrvCursorLinea" x1="' + xUlt.toFixed(1) + '" y1="' + padT + '" x2="' + xUlt.toFixed(1) + '" y2="' + (padT + plotH) + '" stroke="#e7edf2" stroke-width="1.5"></line>';
+  html += '<circle id="hrvCursorPunto" cx="' + xUlt.toFixed(1) + '" cy="' + yAt(ultimo.rmssdMs).toFixed(1) + '" r="3.5" fill="#e7edf2" stroke="#0f1720" stroke-width="1"></circle>';
+  html += '<rect x="' + padL + '" y="0" width="' + (W - padL) + '" height="' + H + '" fill="transparent"></rect>';
+
   svg.innerHTML = html;
+
+  const cursorLinea = document.getElementById('hrvCursorLinea');
+  const cursorPunto = document.getElementById('hrvCursorPunto');
+  const infoEl = document.getElementById('hrvCursorInfo');
+
+  function actualizarCursorHrv(idx) {
+    idx = Math.max(0, Math.min(historial.length - 1, idx));
+    const p = historial[idx];
+    const x = xAt(idx);
+    cursorLinea.setAttribute('x1', x); cursorLinea.setAttribute('x2', x);
+    cursorPunto.setAttribute('cx', x); cursorPunto.setAttribute('cy', yAt(p.rmssdMs).toFixed(1));
+    infoEl.innerHTML = '<b>' + p.fecha + '</b> — RMSSD ' + Math.round(p.rmssdMs) + ' ms' +
+      (p.pulsoPromedio != null ? ' · ' + p.pulsoPromedio + ' lpm' : '') +
+      (p.baseline != null ? ' · promedio 7d ' + Math.round(p.baseline) + ' ms' : '');
+  }
+
+  function posicionAIndice(clientX) {
+    const rect = svg.getBoundingClientRect();
+    const escala = rect.width / W;
+    const xLocal = (clientX - rect.left) / escala;
+    return Math.round((xLocal - padL) / (plotW / Math.max(1, historial.length - 1)));
+  }
+  function moverCursorHrv(e) { actualizarCursorHrv(posicionAIndice(e.clientX)); }
+  function terminarDragHrv(e) {
+    svg.removeEventListener('pointermove', moverCursorHrv);
+    try { svg.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+  svg.onpointerdown = function (e) {
+    svg.setPointerCapture(e.pointerId);
+    moverCursorHrv(e);
+    svg.addEventListener('pointermove', moverCursorHrv);
+    svg.addEventListener('pointerup', terminarDragHrv);
+    svg.addEventListener('pointercancel', terminarDragHrv);
+  };
+
+  actualizarCursorHrv(historial.length - 1);
 }
 
 function recalcularCalorias() {
