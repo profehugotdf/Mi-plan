@@ -151,6 +151,13 @@
   .sesionCard .totalizado{font-family:var(--mono);font-size:0.72rem;color:var(--text-dim);margin-top:2px;}
 
   .senalRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);}
+  .volTabla{width:100%;border-collapse:collapse;font-size:0.72rem;}
+  .volTabla th{font-weight:700;color:var(--text-dim);text-align:right;padding:4px 3px;border-bottom:1px solid var(--line);font-size:0.68rem;}
+  .volTabla th:first-child,.volTabla td:first-child{text-align:left;}
+  .volTabla td{text-align:right;padding:6px 3px;border-bottom:1px solid var(--line);font-family:var(--mono);vertical-align:top;}
+  .volTabla td:first-child{font-family:inherit;color:var(--text-dim);white-space:nowrap;}
+  .volTabla td .sub{display:block;font-size:0.62rem;color:var(--text-dim);}
+  .volTabla td.vacio{color:var(--text-dim);opacity:0.5;}
   .senalRow:last-child{border-bottom:none;}
   .senalRow .punto{width:10px;height:10px;border-radius:50%;flex:none;}
   .senalRow .txt{flex:1;font-size:0.85rem;}
@@ -484,6 +491,18 @@
         <span><span class="dot" style="background:#5fb88a"></span>banda verde: TSB +5 a +25, óptimo pre-competencia</span>
       </div>
       <p class="hint" style="margin-top:8px">Estimación para planificar. El TSS real de Correr/Kayak sale de (pulso promedio ÷ pulso umbral)² × horas × 100; acá, al no tener el pulso real de una sesión futura, se usa el %pulso máx objetivo de esa semana en su lugar — da un TSS algo más alto si tu umbral real es menor al 100% del máximo. El resto de la fórmula (EWMA 42/7 días, TSB = brecha del día anterior) es idéntico al de Correr, Kayak y ahora también Bici Indoor.</p>
+    </div>
+
+    <div class="card" id="volumenCard">
+      <h3>Volumen acumulado</h3>
+      <p style="margin-bottom:8px">Distancia real por disciplina (en km) y tiempo total, agrupado por período. Fuerza va por tiempo, porque no tiene distancia. Sale de las sesiones registradas en Correr, Bici, Kayak y Fuerza.</p>
+      <div class="tabs" style="margin:0 0 8px;padding:0" id="periodoVolumenTabs">
+        <div class="vistaTab active" data-periodo="semana">Semana</div>
+        <div class="vistaTab" data-periodo="mes">Mes</div>
+        <div class="vistaTab" data-periodo="anio">Año</div>
+      </div>
+      <div id="volumenTabla"></div>
+      <p class="hint" id="volumenNota" style="margin-top:6px"></p>
     </div>
   </section>
 
@@ -1064,7 +1083,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab === 'hoy') renderHoy();
     if (tab.dataset.tab === 'calendario') renderCalendario();
-    if (tab.dataset.tab === 'grafico') { renderPanorama(); renderGraficoCiclo(); renderProyeccionForma(); }
+    if (tab.dataset.tab === 'grafico') { renderPanorama(); renderGraficoCiclo(); renderProyeccionForma(); renderVolumen(); }
   });
 });
 
@@ -2756,6 +2775,101 @@ document.querySelectorAll('#periodoFormaTabs .vistaTab').forEach((vt) => {
     vt.classList.add('active');
     periodoForma = vt.dataset.periodo;
     renderProyeccionForma();
+  });
+});
+
+/* ========================= VOLUMEN ACUMULADO POR PERÍODO ========================= */
+
+let periodoVolumen = 'semana';
+const DISC_VOLUMEN = [
+  { key: 'carrera', label: 'Carrera', porDistancia: true },
+  { key: 'bici', label: 'Bici', porDistancia: true },
+  { key: 'kayak', label: 'Kayak', porDistancia: true },
+  { key: 'fuerza', label: 'Fuerza', porDistancia: false },
+];
+
+// Tiempo legible para totales largos: "1 h 20 min" / "45 min" (no mm:ss, que confunde en acumulados).
+function formatoTiempoTotal(seg) {
+  const totalMin = Math.round(seg / 60);
+  if (totalMin < 60) return totalMin + ' min';
+  const h = Math.floor(totalMin / 60), m = totalMin % 60;
+  return h + ' h ' + String(m).padStart(2, '0') + ' min';
+}
+function formatoKm(metros) {
+  const km = metros / 1000;
+  return (km >= 10 ? km.toFixed(1) : km.toFixed(2)) + ' km';
+}
+
+// Suma distancia, tiempo y cantidad de sesiones de cada disciplina por período (semana desde
+// el domingo, mes calendario o año), del más reciente al más viejo.
+function calcularVolumenPorPeriodo(periodo) {
+  const grupos = {};
+  leerSesionesCrudas().forEach((s) => {
+    if (!s.fecha) return;
+    const clave = claveDePeriodo(s.fecha, periodo);
+    if (!grupos[clave]) {
+      grupos[clave] = { clave };
+      DISC_VOLUMEN.forEach((d) => { grupos[clave][d.key] = { m: 0, seg: 0, n: 0 }; });
+    }
+    const g = grupos[clave][s.deporte];
+    if (!g) return; // natación u otra sin columna
+    g.m += s.distanciaM || 0;
+    g.seg += s.duracionSeg || 0;
+    g.n += 1;
+  });
+  return Object.values(grupos).sort((a, b) => (a.clave < b.clave ? 1 : -1));
+}
+
+function etiquetaFilaVolumen(clave, periodo) {
+  if (periodo === 'semana') {
+    const ini = new Date(clave + 'T00:00:00');
+    const fin = new Date(ini); fin.setDate(fin.getDate() + 6);
+    const f = (d) => String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+    return f(ini) + '–' + f(fin);
+  }
+  return etiquetaPeriodo(clave, periodo);
+}
+
+function renderVolumen() {
+  const cont = document.getElementById('volumenTabla');
+  const nota = document.getElementById('volumenNota');
+  const filas = calcularVolumenPorPeriodo(periodoVolumen);
+  if (!filas.length) {
+    cont.innerHTML = '<p class="hint">Todavía no hay sesiones registradas.</p>';
+    nota.textContent = '';
+    return;
+  }
+  const limite = periodoVolumen === 'anio' ? filas.length : 12;
+  const visibles = filas.slice(0, limite);
+
+  let html = '<table class="volTabla"><thead><tr><th>' + { semana: 'Semana', mes: 'Mes', anio: 'Año' }[periodoVolumen] + '</th>' +
+    DISC_VOLUMEN.map((d) => '<th>' + d.label + '</th>').join('') + '</tr></thead><tbody>';
+  visibles.forEach((f) => {
+    html += '<tr><td>' + etiquetaFilaVolumen(f.clave, periodoVolumen) + '</td>';
+    DISC_VOLUMEN.forEach((d) => {
+      const v = f[d.key];
+      if (!v.n) { html += '<td class="vacio">—</td>'; return; }
+      if (d.porDistancia) {
+        html += '<td>' + formatoKm(v.m) + '<span class="sub">' + formatoTiempoTotal(v.seg) + ' · ' + v.n + ' ses.</span></td>';
+      } else {
+        html += '<td>' + formatoTiempoTotal(v.seg) + '<span class="sub">' + v.n + ' ses.</span></td>';
+      }
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  cont.innerHTML = html;
+
+  nota.textContent = (filas.length > limite ? 'Mostrando los últimos ' + limite + ' de ' + filas.length + ' períodos. ' : '') +
+    'Natación no aparece porque todavía no tiene una app que registre sesiones.';
+}
+
+document.querySelectorAll('#periodoVolumenTabs .vistaTab').forEach((vt) => {
+  vt.addEventListener('click', () => {
+    document.querySelectorAll('#periodoVolumenTabs .vistaTab').forEach((x) => x.classList.remove('active'));
+    vt.classList.add('active');
+    periodoVolumen = vt.dataset.periodo;
+    renderVolumen();
   });
 });
 
