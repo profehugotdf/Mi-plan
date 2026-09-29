@@ -517,8 +517,9 @@
       </div>
       <div class="row">
         <div class="field">
-          <label>Edad (años)</label>
-          <input type="number" id="uEdad" min="0" step="1">
+          <label>Fecha de nacimiento</label>
+          <input type="date" id="uFechaNacimiento">
+          <p class="hint" id="uEdadCalculada" style="margin-top:2px"></p>
         </div>
         <div class="field">
           <label>Sexo (para el cálculo de calorías)</label>
@@ -1363,11 +1364,33 @@ document.querySelectorAll('#periodoHistorialTabs .vistaTab').forEach((vt) => {
   });
 });
 
+// Edad exacta en años completos a partir de la fecha de nacimiento — se resta 1 si el
+// cumpleaños de este año todavía no pasó, para no redondear de más.
+function calcularEdadDesde(fechaNacimiento) {
+  if (!fechaNacimiento) return null;
+  const hoy = new Date(hoyISO() + 'T00:00:00');
+  const nac = new Date(fechaNacimiento + 'T00:00:00');
+  let edad = hoy.getFullYear() - nac.getFullYear();
+  const noLlegoElCumpleEsteAnio = (hoy.getMonth() < nac.getMonth()) || (hoy.getMonth() === nac.getMonth() && hoy.getDate() < nac.getDate());
+  if (noLlegoElCumpleEsteAnio) edad -= 1;
+  return edad;
+}
+
+// Edad a usar en los cálculos: preferí la fecha de nacimiento (se actualiza sola); si el perfil
+// todavía tiene el "edad" numérico viejo (de antes de este cambio) y no cargaste la fecha
+// todavía, lo sigue usando de respaldo para no perder el cálculo de calorías de un día para otro.
+function edadEfectiva(p) {
+  const porFecha = calcularEdadDesde(p.fechaNacimiento);
+  return porFecha != null ? porFecha : (p.edad || null);
+}
+
 function cargarFormularioPerfil() {
   const p = leerPerfil();
   document.getElementById('uPeso').value = p.pesoKg || '';
-  document.getElementById('uEdad').value = p.edad || '';
+  document.getElementById('uFechaNacimiento').value = p.fechaNacimiento || '';
   document.getElementById('uSexo').value = p.sexo || '';
+  const edad = edadEfectiva(p);
+  document.getElementById('uEdadCalculada').textContent = edad != null ? (edad + ' años') : (p.fechaNacimiento ? '' : 'Cargá tu fecha de nacimiento para que las calorías se calculen bien.');
   document.getElementById('perfilActualizado').textContent = p.actualizado ? ('Última actualización: ' + p.actualizado) : 'Todavía no cargaste tu peso.';
   dibujarGraficoPeso(p.historialPeso || []);
 }
@@ -1416,7 +1439,8 @@ function dibujarGraficoPeso(historial) {
 document.getElementById('btnGuardarPerfil').addEventListener('click', () => {
   const p = leerPerfil(); // objeto completo, para no pisar campos que agreguen otras apps
   p.pesoKg = parseFloat(document.getElementById('uPeso').value) || null;
-  p.edad = parseFloat(document.getElementById('uEdad').value) || null;
+  p.fechaNacimiento = document.getElementById('uFechaNacimiento').value || null;
+  delete p.edad; // reemplazado por fechaNacimiento — se calcula, no se guarda fijo
   p.sexo = document.getElementById('uSexo').value || null;
   p.actualizado = hoyISO();
   if (p.pesoKg) {
@@ -1729,8 +1753,9 @@ function dibujarGraficoHrv(historial, estadoHrv) {
 
 function recalcularCalorias() {
   const perfil = leerPerfil();
-  if (!perfil.pesoKg || !perfil.edad || !perfil.sexo) {
-    return { ok: false, motivo: 'Cargá peso, edad y sexo en Perfil primero.' };
+  const edad = edadEfectiva(perfil);
+  if (!perfil.pesoKg || !edad || !perfil.sexo) {
+    return { ok: false, motivo: 'Cargá peso, fecha de nacimiento y sexo en Perfil primero.' };
   }
   const sesiones = leerSesionesCrudas();
   const registro = leerRegistroForma();
@@ -1740,7 +1765,7 @@ function recalcularCalorias() {
     const idx = registro.findIndex((r) => r.deporte === s.deporte && r.id === s.id);
     if (idx === -1) { sinMatch++; return; } // esa sesión no está (todavía) en el registro compartido
     const duracionMin = (s.duracionSeg || 0) / 60;
-    const cal = calcularCaloriasSesion(s.pulso, perfil.pesoKg, perfil.edad, perfil.sexo, duracionMin);
+    const cal = calcularCaloriasSesion(s.pulso, perfil.pesoKg, edad, perfil.sexo, duracionMin);
     if (cal == null) { sinPulso++; return; }
     registro[idx].calorias = cal;
     actualizadas++;
@@ -1903,10 +1928,12 @@ function importarUmbralesDeApps() {
     document.getElementById('uPeso').value = perfilCorrer.pesoKg;
     encontrados.push('peso de Correr');
   }
-  // edad/sexo: no confirmado si correr_perfil los guarda todavía — se toman si aparecen, sin asumir.
-  if (perfilCorrer && perfilCorrer.edad) {
-    document.getElementById('uEdad').value = perfilCorrer.edad;
-    encontrados.push('edad de Correr');
+  // sexo: no confirmado si correr_perfil lo guarda todavía — se toma si aparece, sin asumir.
+  // edad: si correr_perfil tiene fechaNacimiento, se usa directo; si solo tiene el edad numérico
+  // viejo, no se puede prellenar una fecha con eso — hay que cargarla a mano acá.
+  if (perfilCorrer && perfilCorrer.fechaNacimiento) {
+    document.getElementById('uFechaNacimiento').value = perfilCorrer.fechaNacimiento;
+    encontrados.push('fecha de nacimiento de Correr');
   }
   if (perfilCorrer && perfilCorrer.sexo) {
     document.getElementById('uSexo').value = perfilCorrer.sexo;
