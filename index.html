@@ -641,8 +641,8 @@
 
     <div class="card">
       <h3>Importar actividades de Garmin</h3>
-      <p style="margin-bottom:10px">Subí uno o varios archivos <span class="mono">.fit</span> exportados de Garmin Connect (carrera, bici, kayak — para fuerza usá la app Fuerza, que tiene su propio importador). Revisás antes de confirmar.</p>
-      <input type="file" id="fitFiles" accept=".fit" multiple style="margin-bottom:10px">
+      <p style="margin-bottom:10px">Subí uno o varios archivos <span class="mono">.fit</span> o <span class="mono">.tcx</span> exportados de Garmin Connect (carrera, bici, kayak — para fuerza usá la app Fuerza, que tiene su propio importador). Revisás antes de confirmar.</p>
+      <input type="file" id="fitFiles" accept=".fit,.tcx" multiple style="margin-bottom:10px">
       <div class="btnRow">
         <button class="primary" id="btnProcesarFit">Procesar archivos</button>
       </div>
@@ -651,7 +651,7 @@
         <button class="primary" style="width:100%" id="btnConfirmarFit">Confirmar e importar</button>
       </div>
       <p class="hint" id="fitResultado" style="margin-top:8px"></p>
-      <p class="hint" style="margin-top:6px">No trae archivos .zip todavía, solo .fit sueltos — en Garmin Connect exportá "Original" actividad por actividad, o descomprimí el zip del historial completo antes de subir.</p>
+      <p class="hint" style="margin-top:6px">Acepta .fit y .tcx sueltos, no .zip todavía — en Garmin Connect exportá "Original" (.fit) o "Exportar TCX" actividad por actividad, o descomprimí el zip del historial completo antes de subir.</p>
     </div>
 
     <div class="card">
@@ -3192,6 +3192,76 @@ function construirResumenSesionFit(campos, nombreArchivo) {
   };
 }
 
+/* ========================= IMPORTADOR GARMIN (.tcx) ========================= */
+// TCX es XML — mucho más simple que el binario FIT, se lee con el DOMParser nativo del navegador.
+
+const MAPA_SPORT_TCX = { Running: 'carrera', Biking: 'bici' }; // "Other" (kayak, etc.) queda sin sugerencia — se elige a mano en la vista previa
+
+function textoDeHijo(el, tag) {
+  const hijo = el.getElementsByTagName(tag)[0];
+  return hijo ? hijo.textContent : null;
+}
+// Busca un tag por su nombre local, sin importar el prefijo de namespace (las extensiones de
+// Garmin, tipo <ns3:LX>, vienen con prefijos que varían según qué exportó el archivo).
+function buscarPorNombreLocal(el, nombreLocal) {
+  const todos = el.getElementsByTagName('*');
+  for (let i = 0; i < todos.length; i++) {
+    if (todos[i].localName === nombreLocal || todos[i].tagName === nombreLocal) return todos[i];
+  }
+  return null;
+}
+
+function parsearSesionesTcx(texto, nombreArchivo) {
+  const xml = new DOMParser().parseFromString(texto, 'application/xml');
+  if (xml.getElementsByTagName('parsererror').length) throw new Error('XML inválido');
+
+  const actividades = Array.from(xml.getElementsByTagName('Activity'));
+  const resumenes = [];
+
+  actividades.forEach((act) => {
+    const sport = act.getAttribute('Sport') || '';
+    const idTexto = textoDeHijo(act, 'Id');
+    if (!idTexto) return;
+    const fechaMs = new Date(idTexto).getTime();
+    if (isNaN(fechaMs)) return;
+
+    const laps = Array.from(act.getElementsByTagName('Lap'));
+    let duracionSeg = 0, distM = 0;
+    let sumaHrPond = 0, pondHr = 0, sumaWattsPond = 0, pondWatts = 0;
+
+    laps.forEach((lap) => {
+      const tt = parseFloat(textoDeHijo(lap, 'TotalTimeSeconds')) || 0;
+      const dm = parseFloat(textoDeHijo(lap, 'DistanceMeters')) || 0;
+      duracionSeg += tt;
+      distM += dm;
+
+      const hrEl = lap.getElementsByTagName('AverageHeartRateBpm')[0];
+      const hrVal = hrEl ? parseFloat(textoDeHijo(hrEl, 'Value')) : null;
+      if (hrVal) { sumaHrPond += hrVal * tt; pondHr += tt; }
+
+      // potencia promedio del lap: extensión no estándar (Garmin la llama AvgWatts dentro de
+      // Extensions/LX) — no todos los .tcx la traen, queda null si no está.
+      const avgWattsEl = buscarPorNombreLocal(lap, 'AvgWatts');
+      const wattsVal = avgWattsEl ? parseFloat(avgWattsEl.textContent) : null;
+      if (wattsVal) { sumaWattsPond += wattsVal * tt; pondWatts += tt; }
+    });
+
+    resumenes.push({
+      idFuente: 'tcx_' + idTexto,
+      fecha: fechaLocalISO(fechaMs),
+      disciplinaSugerida: MAPA_SPORT_TCX[sport] || null,
+      sportCrudo: sport,
+      duracionSeg: duracionSeg || null,
+      distM: distM || null,
+      avgHr: pondHr ? Math.round(sumaHrPond / pondHr) : null,
+      avgSpeedMs: duracionSeg ? distM / duracionSeg : null,
+      avgPower: pondWatts ? Math.round(sumaWattsPond / pondWatts) : null,
+      archivo: nombreArchivo,
+    });
+  });
+  return resumenes;
+}
+
 // TSS estimado con la misma lógica de las apps hermanas: potencia si hay FTP cargado (bici),
 // ritmo si hay umbral de ritmo (carrera), pulso como último recurso (kayak, o carrera sin ritmo).
 function calcularTssImportado(resumen, disciplina) {
@@ -3224,15 +3294,23 @@ document.getElementById('btnProcesarFit').addEventListener('click', async () => 
 
   sesionesFitPendientes = [];
   for (const archivo of archivos) {
+    const esTcx = /\.tcx$/i.test(archivo.name);
     try {
-      const buffer = await archivo.arrayBuffer();
-      const crudas = parsearSesionesFit(buffer);
-      crudas.forEach((campos) => {
-        const resumen = construirResumenSesionFit(campos, archivo.name);
-        if (resumen.idFuente != null && resumen.fecha) sesionesFitPendientes.push(resumen);
-      });
+      if (esTcx) {
+        const texto = await archivo.text();
+        const resumenes = parsearSesionesTcx(texto, archivo.name);
+        resumenes.forEach((r) => { if (r.idFuente != null && r.fecha) sesionesFitPendientes.push(r); });
+      } else {
+        const buffer = await archivo.arrayBuffer();
+        const crudas = parsearSesionesFit(buffer);
+        crudas.forEach((campos) => {
+          const resumen = construirResumenSesionFit(campos, archivo.name);
+          if (resumen.idFuente != null && resumen.fecha) sesionesFitPendientes.push(resumen);
+        });
+      }
     } catch (e) {
       console.error('Error procesando ' + archivo.name, e);
+      toast('No pude leer ' + archivo.name + ' — ¿es un .fit o .tcx válido?');
     }
   }
   renderPreviewFit();
