@@ -348,6 +348,56 @@
         <input type="date" id="fFechaInicio">
       </div>
 
+      <div class="field">
+        <label>Modelo de periodización</label>
+        <select id="fModelo">
+          <option value="tradicional">Lineal progresiva — volumen e intensidad suben gradualmente hasta el final</option>
+          <option value="inversa">Inversa — arranca con poco volumen e intensidad alta; el volumen sube y la intensidad baja hasta el evento</option>
+          <option value="objetivos">Por bloques — cada ciclo tiene un foco (base, técnica, VO2 máx…)</option>
+        </select>
+      </div>
+      <div class="field" id="fEnfoqueWrap" style="display:none">
+        <label>Foco del ciclo</label>
+        <select id="fEnfoque">
+          <option value="base_aerobica">Base aeróbica</option>
+          <option value="tecnica">Técnica</option>
+          <option value="umbral">Umbral</option>
+          <option value="vo2max">VO2 máx</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Referencia de intensidad</label>
+        <select id="fRefIntensidad">
+          <option value="umbral">% del pulso de umbral (recomendado)</option>
+          <option value="pulsoMax">% del pulso máximo</option>
+        </select>
+      </div>
+      <p id="fModeloHint" class="hint"></p>
+      <details id="refsModelos" style="margin:6px 0 10px">
+        <summary style="cursor:pointer;font-weight:600">ℹ️ Terminología y referencias</summary>
+        <div class="hint" style="margin-top:6px">
+          <p><b>Planificación</b> es el proceso completo (objetivos, cargas, calendario y control). <b>Periodización</b> es la división de la temporada en períodos y fases; los tres modelos de arriba son modelos de periodización. <b>Afinación (tapering)</b> es la reducción progresiva de la carga previa al evento.</p>
+          <p><b>Revisadas en detalle:</b></p>
+          <ul>
+            <li>González-Ravé JM, González-Mohíno F, Rodrigo-Carranza V, Pyne DB y cols. (2022). Reverse Periodization for Improving Sports Performance: A Systematic Review. <i>Sports Medicine – Open</i>, 8:56. <a href="https://link.springer.com/article/10.1186/s40798-022-00445-8" target="_blank" rel="noopener">enlace</a></li>
+            <li>Mølmen KS, Øfsteng SJ, Rønnestad BR (2019). Block periodization of endurance training – a systematic review and meta-analysis. <i>Open Access Journal of Sports Medicine</i>. <a href="https://www.dovepress.com/block-periodization-of-endurance-training-a-systematic-review-and-meta-peer-reviewed-fulltext-article-OAJSM" target="_blank" rel="noopener">enlace</a></li>
+            <li>Silva Oliveira P, Boppre G, Fonseca H (2024). Comparison of Polarized Versus Other Types of Endurance Training Intensity Distribution on Athletes' Endurance Performance: A Systematic Review with Meta-analysis. <i>Sports Medicine</i>, 54:2071–2095. <a href="https://link.springer.com/article/10.1007/s40279-024-02034-z" target="_blank" rel="noopener">enlace</a></li>
+            <li>Wang Z, Wang Y, Gao W, Zhong Y (2023). Effects of tapering on performance in endurance athletes: A systematic review and meta-analysis. <i>PLOS ONE</i>.</li>
+          </ul>
+          <p><b>Clásicos (citados de memoria; verificar edición y páginas antes de citar):</b></p>
+          <ul>
+            <li>Bompa TO, Buzzichelli C. <i>Periodization: Theory and Methodology of Training</i>. Human Kinetics (Matveyev como origen del modelo lineal).</li>
+            <li>Issurin VB (2010). New horizons for the methodology and physiology of training periodization. <i>Sports Medicine</i>, 40(3).</li>
+            <li>Seiler S (2010). What is best practice for training intensity and duration distribution in endurance athletes? <i>Int J Sports Physiol Perform</i>, 5.</li>
+          </ul>
+          <p>Referencia de intensidad: la literatura actual prefiere anclar las zonas a umbrales (ventilatorio o de lactato) antes que al pulso máximo, porque el % del máximo varía mucho entre personas. Con referencia en el umbral, el TSS estimado usa directamente ese porcentaje como factor de intensidad (IF) y en Plan de hoy se muestran los lpm si cargaste tus pulsos de umbral. Los ciclos que ya tenías conservan el pulso máximo.</p>
+          <p>Los porcentajes de pulso y los factores de cada plantilla son orientativos y no provienen de estos trabajos.</p>
+        </div>
+      </details>
+      <button type="button" id="btnAplicarModelo">Aplicar modelo a horas, intensidad y zonas</button>
+      <p style="margin-top:4px">Aplicar reescribe los valores de inicio/fin de horas, % pulso y zonas con una plantilla (y propone una afinación (tapering) de 10 días con -50% de volumen si no tenías ninguna); después los podés ajustar a mano. Para el modelo por objetivos, encadená varios ciclos (base → técnica → VO2 máx).</p>
+
+
       <h3 style="margin-top:10px">Evento objetivo (opcional)</h3>
       <p>Si cargás una fecha de evento, la duración del ciclo se calcula sola — desde el inicio hasta ese día — y el taper termina justo ahí.</p>
       <div class="row">
@@ -490,7 +540,7 @@
         <span><span class="dot" style="background:#d9705a"></span>banda roja: TSB &lt; -30, riesgo</span>
         <span><span class="dot" style="background:#5fb88a"></span>banda verde: TSB +5 a +25, óptimo pre-competencia</span>
       </div>
-      <p class="hint" style="margin-top:8px">Estimación para planificar. El TSS real de Correr/Kayak sale de (pulso promedio ÷ pulso umbral)² × horas × 100; acá, al no tener el pulso real de una sesión futura, se usa el %pulso máx objetivo de esa semana en su lugar — da un TSS algo más alto si tu umbral real es menor al 100% del máximo. El resto de la fórmula (EWMA 42/7 días, TSB = brecha del día anterior) es idéntico al de Correr, Kayak y ahora también Bici Indoor.</p>
+      <p class="hint" style="margin-top:8px">Estimación para planificar. El TSS real de Correr/Kayak sale de (pulso promedio ÷ pulso umbral)² × horas × 100; acá, al no tener el pulso real de una sesión futura, se usa el % objetivo de esa semana en su lugar. Si el ciclo tiene como referencia el pulso de umbral, ese porcentaje es directamente el factor de intensidad; si tiene el pulso máximo, el TSS sale algo más alto porque tu umbral real es menor al 100% del máximo. El resto de la fórmula (EWMA 42/7 días, TSB = brecha del día anterior) es idéntico al de Correr, Kayak y ahora también Bici Indoor.</p>
     </div>
 
     <div class="card" id="volumenCard">
@@ -782,7 +832,7 @@ function calcularDia(config, fechaISO) {
   for (const z of METRICAS_ZONA) {
     const cfg = config.zonas[z.key];
     if (z.key === 'pctPulsoMax') {
-      zonas[z.key] = { label: z.label, fase: z.fase, esPorcentaje: true, valor: interpolarValor(curva, cfg.inicio, cfg.fin, 'entero-trunc') };
+      zonas[z.key] = { label: config.refIntensidad === 'umbral' ? '% pulso umbral' : z.label, fase: z.fase, esPorcentaje: true, valor: interpolarValor(curva, cfg.inicio, cfg.fin, 'entero-trunc') };
       continue;
     }
     const trabajoSeg = interpolarValor(curva, cfg.trabajo.inicio, cfg.trabajo.fin, 'continuo');
@@ -878,7 +928,7 @@ function calcularEstadoActual(registro, hastaISO) {
 function tssDiarioEstimado(configConOverrides, fechaISO) {
   const r = calcularDia(configConOverrides, fechaISO);
   if (r.fueraDeRango) return 0;
-  const IF = (r.zonas.pctPulsoMax.valor || 70) / 100;
+  const IF = (r.zonas.pctPulsoMax.valor || (configConOverrides.refIntensidad === 'umbral' ? 80 : 70)) / 100;
   let tssSemana = 0;
   DISCIPLINAS.forEach((d) => {
     const dd = r.disciplinas[d.key];
@@ -947,6 +997,7 @@ function guardarOverrides(ov) {
 function configDefault() {
   return {
     nombre: 'Nuevo ciclo',
+    modelo: 'inversa', enfoque: 'base_aerobica', refIntensidad: 'umbral',
     fechaInicio: new Date().toISOString().slice(0, 10),
     totalDias: 84,
     k: 0.02,
@@ -971,7 +1022,7 @@ function configDefault() {
       capAerobMax: { trabajo: { inicio: 2400, fin: 3600 }, recuperacion: { inicio: 0, fin: 0 }, series: { inicio: 1, fin: 1 } },
       capEfAerob2: { trabajo: { inicio: 5400, fin: 10800 }, recuperacion: { inicio: 0, fin: 0 }, series: { inicio: 1, fin: 1 } },
       capAerob1: { trabajo: { inicio: 10800, fin: 21600 }, recuperacion: { inicio: 0, fin: 0 }, series: { inicio: 1, fin: 1 } },
-      pctPulsoMax: { inicio: 80, fin: 86 },
+      pctPulsoMax: { inicio: 90, fin: 95 },
     },
   };
 }
@@ -981,6 +1032,9 @@ function configDefault() {
 // Ciclos guardados antes de la función de series tenían zonas planas {inicio,fin}
 // (= tiempo de trabajo). Esto las convierte al formato con trabajo/recuperación/series.
 function migrarCiclo(config) {
+  if (!config.modelo) config.modelo = 'tradicional';
+  if (!config.refIntensidad) config.refIntensidad = 'pulsoMax';
+  if (!config.enfoque) config.enfoque = 'base_aerobica';
   if (config.eventoNombre === undefined) config.eventoNombre = '';
   if (config.eventoFecha === undefined) config.eventoFecha = '';
   if (!config.taper) config.taper = { dias: 0, reduccionPct: 0 };
@@ -3665,7 +3719,17 @@ function actualizarPlanHoy() {
     sesionesEl.appendChild(card);
   });
 
-  document.getElementById('pulsoHint').textContent = '% pulso máx sugerido para el trabajo aeróbico de esta semana: ' + r.zonas.pctPulsoMax.valor + '% · ciclo: ' + config.nombre;
+  const esUmbral = config.refIntensidad === 'umbral';
+  let bpmTxt = '';
+  if (esUmbral) {
+    const u = leerUmbrales();
+    const partes = [];
+    if (u.pulsoUmbralCarrera) partes.push('Carrera ' + Math.round(u.pulsoUmbralCarrera * r.zonas.pctPulsoMax.valor / 100) + ' lpm');
+    if (u.pulsoUmbralBici) partes.push('Bici ' + Math.round(u.pulsoUmbralBici * r.zonas.pctPulsoMax.valor / 100) + ' lpm');
+    if (u.pulsoUmbralKayak) partes.push('Kayak ' + Math.round(u.pulsoUmbralKayak * r.zonas.pctPulsoMax.valor / 100) + ' lpm');
+    if (partes.length) bpmTxt = ' (' + partes.join(' · ') + ')';
+  }
+  document.getElementById('pulsoHint').textContent = (esUmbral ? '% pulso umbral' : '% pulso máx') + ' sugerido para el trabajo aeróbico de esta semana: ' + r.zonas.pctPulsoMax.valor + '%' + bpmTxt + ' · ciclo: ' + config.nombre;
 }
 
 document.getElementById('fechaPlan').addEventListener('change', actualizarPlanHoy);
@@ -3715,7 +3779,7 @@ document.getElementById('btnGuardarPlan').addEventListener('click', () => {
   METRICAS_ZONA.forEach((z) => {
     const zz = r.zonas[z.key];
     if (z.key === 'pctPulsoMax') {
-      salida.zonas[z.key] = { label: zz.label, pctPulsoMax: zz.valor };
+      salida.zonas[z.key] = { label: zz.label, pctPulsoMax: zz.valor, referencia: config.refIntensidad === 'umbral' ? 'umbral' : 'pulsoMax' };
     } else {
       salida.zonas[z.key] = {
         label: zz.label,
@@ -3773,6 +3837,10 @@ function abrirFormularioCiclo(id) {
 
   document.getElementById('formCicloCard').style.display = 'block';
   document.getElementById('fNombre').value = cicloEnEdicion.nombre;
+  document.getElementById('fModelo').value = cicloEnEdicion.modelo || 'tradicional';
+  document.getElementById('fEnfoque').value = cicloEnEdicion.enfoque || 'base_aerobica';
+  document.getElementById('fRefIntensidad').value = cicloEnEdicion.refIntensidad || 'pulsoMax';
+  actualizarHintModelo();
   document.getElementById('fFechaInicio').value = cicloEnEdicion.fechaInicio;
   document.getElementById('fEventoNombre').value = cicloEnEdicion.eventoNombre || '';
   document.getElementById('fEventoFecha').value = cicloEnEdicion.eventoFecha || '';
@@ -3862,7 +3930,7 @@ function renderTablaZonas() {
 
     if (z.key === 'pctPulsoMax') {
       card.innerHTML =
-        '<div class="titulo">' + z.label + '</div>' +
+        '<div class="titulo">' + (cicloEnEdicion.refIntensidad === 'umbral' ? '% pulso umbral' : z.label) + '</div>' +
         '<div class="subrow"><span class="lbl">Inicio</span><input type="number" data-k="inicio" value="' + cfg.inicio + '"><span class="arrow">→</span>' +
         '<span class="lbl">Fin</span><input type="number" data-k="fin" value="' + cfg.fin + '"></div>';
       card.querySelectorAll('input').forEach((inp) => {
@@ -3939,9 +4007,87 @@ function actualizarProximoEventoCompartido() {
   }));
 }
 
+/* ========================= MODELOS DE PLANIFICACIÓN ========================= */
+
+const MODELOS_PLAN = {
+  tradicional: 'Volumen e intensidad suben de a poco hasta el final del ciclo (pulso 78% → 88%, zonas más largas y con más series): una periodización lineal con sobrecarga progresiva. Ojo: el modelo clásico de Matveyev/Bompa, en su fase específica, baja el volumen a medida que sube la intensidad; esta plantilla es una variante simplificada. Los bloques mostraron una ventaja pequeña en VO2máx frente a este en una revisión de 2019 (Mølmen, Øfsteng y Rønnestad), pero con estudios de baja calidad.',
+  inversa: 'Arranca con volumen bajo e intensidad alta (pulso 90%) y a medida que sube el volumen baja la intensidad (75%) hasta el evento. Ojo: una revisión sistemática de 2022 (González-Ravé y cols., Sports Med Open) concluye que no es más efectiva que otras formas de periodizar; es una opción válida de organización, no una mejora comprobada. Los porcentajes de pulso son orientativos.',
+  objetivos: 'Cada ciclo (bloque) se centra en un objetivo (base, técnica, umbral, VO2 máx) y se encadenan. Se inspira en la periodización por bloques de Issurin, que usa bloques de acumulación, transmutación y realización; la evidencia es prometedora pero preliminar (Mølmen y cols., 2019). Los valores de cada foco son orientativos.',
+};
+const ENFOQUES_PLAN = {
+  base_aerobica: { pulso: [70, 78], alta: [0.5, 0.6], aerob: [0.8, 1.2] },
+  tecnica:       { pulso: [68, 74], alta: [0.6, 0.8], aerob: [0.5, 0.7] },
+  umbral:        { pulso: [82, 90], alta: [0.7, 1.0], aerob: [0.9, 1.3], extra: { potAerob: [1.0, 1.6] } },
+  vo2max:        { pulso: [85, 92], alta: [1.0, 1.4], aerob: [0.5, 0.8], extra: { potAerobMax: [1.0, 1.8], potAerob: [0.8, 1.2] } },
+};
+const ZONAS_ALTA = ['potFosf', 'capFosf', 'potGlucol', 'capGlucol', 'potAerobMax'];
+const ZONAS_AEROB = ['potAerob', 'capAerobMax', 'capEfAerob2', 'capAerob1'];
+
+function actualizarHintModelo() {
+  const m = document.getElementById('fModelo').value;
+  document.getElementById('fModeloHint').textContent = MODELOS_PLAN[m] || '';
+  document.getElementById('fEnfoqueWrap').style.display = m === 'objetivos' ? '' : 'none';
+}
+
+function escalarZona(z, fTrab, fSer) {
+  const r = (v) => Math.round(v);
+  return {
+    trabajo: { inicio: r(z.trabajo.inicio * fTrab[0]), fin: r(z.trabajo.fin * fTrab[1]) },
+    recuperacion: { inicio: r(z.recuperacion.inicio * fTrab[0]), fin: r(z.recuperacion.fin * fTrab[1]) },
+    series: { inicio: Math.max(1, r(z.series.inicio * fSer[0])), fin: Math.max(1, r(z.series.fin * fSer[1])) },
+  };
+}
+
+function aplicarModeloAlCiclo(c, modelo, enfoque) {
+  const base = configDefault().zonas;
+  const z = {};
+  let pulso, fAlta, fAerob, extra = {};
+  if (modelo === 'inversa') {
+    pulso = [90, 75]; fAlta = [1.0, 0.45]; fAerob = [0.4, 1.2];
+  } else if (modelo === 'objetivos') {
+    const e = ENFOQUES_PLAN[enfoque] || ENFOQUES_PLAN.base_aerobica;
+    pulso = e.pulso; fAlta = e.alta; fAerob = e.aerob; extra = e.extra || {};
+  } else {
+    pulso = [78, 88]; fAlta = [1.0, 1.0]; fAerob = [1.0, 1.0];
+  }
+  ZONAS_ALTA.forEach((k) => { z[k] = modelo === 'tradicional' ? base[k] : escalarZona(base[k], [fAlta[0], fAlta[1]], [fAlta[0], fAlta[1]]); });
+  ZONAS_AEROB.forEach((k) => { z[k] = modelo === 'tradicional' ? base[k] : escalarZona(base[k], [fAerob[0], fAerob[1]], [1, 1]); });
+  Object.keys(extra).forEach((k) => { z[k] = escalarZona(base[k], [extra[k][0], extra[k][1]], [extra[k][0], extra[k][1]]); });
+  // Las plantillas están pensadas en % del pulso máximo; si la referencia es el umbral, se convierten (umbral ≈ 90% del máx).
+  const umb = c.refIntensidad === 'umbral';
+  z.pctPulsoMax = umb ? { inicio: Math.round(pulso[0] / 0.9), fin: Math.round(pulso[1] / 0.9) } : { inicio: pulso[0], fin: pulso[1] };
+  c.zonas = z;
+  // El volumen siempre sube hasta el evento en tradicional e inversa; en objetivos queda casi parejo.
+  let h0 = c.horasSemana.inicio || 5, h1 = c.horasSemana.fin || 10;
+  if (modelo === 'objetivos') { h1 = Math.max(h0, Math.round(h0 * 1.2 * 2) / 2); }
+  else if (h1 <= h0) { const t = h0; h0 = Math.min(h0, h1) || 5; h1 = Math.max(t, h1, h0 * 1.5); }
+  c.horasSemana = { inicio: h0, fin: h1 };
+  // Afinación según revisión de Wang y cols. (PLOS ONE 2023): ~8–14 días, volumen -41–60% progresivo, intensidad y frecuencia sin cambios.
+  if (modelo !== 'objetivos' && (!c.taper || !c.taper.dias)) c.taper = { dias: 10, reduccionPct: 50 };
+  c.modelo = modelo; c.enfoque = enfoque;
+}
+
+document.getElementById('fModelo').addEventListener('change', actualizarHintModelo);
+document.getElementById('btnAplicarModelo').addEventListener('click', () => {
+  cicloEnEdicion.horasSemana.inicio = parseFloat(document.getElementById('fHorasIni').value) || 0;
+  cicloEnEdicion.horasSemana.fin = parseFloat(document.getElementById('fHorasFin').value) || 0;
+  cicloEnEdicion.refIntensidad = document.getElementById('fRefIntensidad').value;
+  aplicarModeloAlCiclo(cicloEnEdicion, document.getElementById('fModelo').value, document.getElementById('fEnfoque').value);
+  document.getElementById('fHorasIni').value = cicloEnEdicion.horasSemana.inicio;
+  document.getElementById('fHorasFin').value = cicloEnEdicion.horasSemana.fin;
+  document.getElementById('fTaperDias').value = cicloEnEdicion.taper.dias;
+  document.getElementById('fTaperPct').value = cicloEnEdicion.taper.reduccionPct;
+  renderTablaZonas();
+  dibujarGraficoHoras();
+  toast('Modelo aplicado ✓ — revisá y ajustá los valores');
+});
+
 document.getElementById('btnGuardarCiclo').addEventListener('click', () => {
   cicloEnEdicion.nombre = document.getElementById('fNombre').value.trim() || 'Ciclo sin nombre';
   cicloEnEdicion.fechaInicio = document.getElementById('fFechaInicio').value;
+  cicloEnEdicion.modelo = document.getElementById('fModelo').value;
+  cicloEnEdicion.refIntensidad = document.getElementById('fRefIntensidad').value;
+  cicloEnEdicion.enfoque = document.getElementById('fEnfoque').value;
   cicloEnEdicion.eventoNombre = document.getElementById('fEventoNombre').value.trim();
   cicloEnEdicion.eventoFecha = document.getElementById('fEventoFecha').value;
   cicloEnEdicion.totalDias = calcularTotalDiasDesdeForm();
