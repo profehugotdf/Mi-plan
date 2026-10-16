@@ -478,6 +478,14 @@
       <p>Trabajo y descanso en mm:ss o h:mm:ss. Series = repeticiones de esa zona en una sesión.</p>
       <div id="zonaCards"></div>
 
+      <h3 style="margin-top:14px">Vista previa de una semana</h3>
+      <p>Cómo queda una semana típica con los valores actuales del formulario (sin guardar). Sirve para detectar sesiones demasiado largas, cortas o zonas poco realistas.</p>
+      <div class="field">
+        <label>Semana: <span id="vpSemanaLabel" class="mono">1</span></label>
+        <input type="range" id="vpSemana" min="1" max="12" step="1" value="1">
+      </div>
+      <div id="vpContenido"></div>
+
       <div class="btnRow">
         <button class="primary" id="btnGuardarCiclo">Guardar ciclo</button>
         <button class="ghost" id="btnCancelarCiclo">Cancelar</button>
@@ -1261,6 +1269,7 @@ function dibujarGraficoHoras() {
   actualizarHintDuracion();
   const k = parseFloat(document.getElementById('fK').value) || 0.001;
   const totalDias = calcularTotalDiasDesdeForm();
+  const semanas = Math.max(1, Math.round(totalDias / 7));
   const horasIni = parseFloat(document.getElementById('fHorasIni').value) || 0;
   const horasFin = parseFloat(document.getElementById('fHorasFin').value) || 0;
   const taperDias = Math.max(0, Math.round(parseFloat(document.getElementById('fTaperDias').value) || 0));
@@ -3858,6 +3867,8 @@ function abrirFormularioCiclo(id) {
   renderDiasSemana();
   renderTablaZonas();
   dibujarGraficoHoras();
+  document.getElementById('vpSemana').value = 1;
+  actualizarVistaPrevia();
   document.getElementById('formCicloCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -4080,6 +4091,78 @@ document.getElementById('btnAplicarModelo').addEventListener('click', () => {
   renderTablaZonas();
   dibujarGraficoHoras();
   toast('Modelo aplicado ✓ — revisá y ajustá los valores');
+});
+
+/* ========================= VISTA PREVIA DE SEMANA ========================= */
+
+function sumarDiasISO(iso, n) {
+  const p = iso.split('-').map(Number);
+  const d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + n));
+  return d.toISOString().slice(0, 10);
+}
+
+function configDesdeFormulario() {
+  const c = JSON.parse(JSON.stringify(cicloEnEdicion));
+  c.fechaInicio = document.getElementById('fFechaInicio').value || fechaLocalISO(new Date());
+  c.totalDias = calcularTotalDiasDesdeForm();
+  c.k = parseFloat(document.getElementById('fK').value) || 0.02;
+  c.horasSemana = {
+    inicio: parseFloat(document.getElementById('fHorasIni').value) || 0,
+    fin: parseFloat(document.getElementById('fHorasFin').value) || 0,
+  };
+  c.taper = {
+    dias: Math.max(0, Math.round(parseFloat(document.getElementById('fTaperDias').value) || 0)),
+    reduccionPct: Math.max(0, Math.min(90, parseFloat(document.getElementById('fTaperPct').value) || 0)),
+  };
+  c.refIntensidad = document.getElementById('fRefIntensidad').value;
+  return c;
+}
+
+function actualizarVistaPrevia() {
+  const cont = document.getElementById('vpContenido');
+  if (!cont || !cicloEnEdicion || document.getElementById('formCicloCard').style.display === 'none') return;
+  let c;
+  try { c = configDesdeFormulario(); } catch (e) { return; }
+  const slider = document.getElementById('vpSemana');
+  const semanas = Math.max(1, Math.ceil(c.totalDias / 7));
+  slider.max = semanas;
+  if (parseInt(slider.value, 10) > semanas) slider.value = semanas;
+  const sem = parseInt(slider.value, 10) || 1;
+  document.getElementById('vpSemanaLabel').textContent = sem + ' de ' + semanas;
+
+  const dia = Math.min(c.totalDias, (sem - 1) * 7 + 4); // miércoles/jueves de esa semana
+  const r = calcularDia(c, sumarDiasISO(c.fechaInicio, dia - 1));
+  const avisos = [];
+  let filas = '';
+  DISCIPLINAS.forEach((d) => {
+    const dd = r.disciplinas[d.key];
+    if (!dd.sesionesSemana || !dd.pct) return;
+    const min = Math.round(dd.tiempoSesionSeg / 60);
+    filas += '<tr><td>' + d.label + '</td><td class="mono">' + dd.sesionesSemana + ' × ' + min + ' min</td><td class="mono">' + (dd.tiempoSemanaSeg / 3600).toFixed(1) + ' h</td></tr>';
+    if (min > 240) avisos.push(d.label + ': sesiones de ' + min + ' min — ¿realista?');
+    if (min > 0 && min < 10) avisos.push(d.label + ': sesiones de solo ' + min + ' min.');
+  });
+  let zonas = '';
+  METRICAS_ZONA.forEach((z) => {
+    const zz = r.zonas[z.key];
+    if (z.key === 'pctPulsoMax') return;
+    const est = zz.series + ' × ' + segARelojes(zz.trabajoSeg) + (zz.recuperacionSeg > 0 && zz.series > 1 ? ' / ' + segARelojes(zz.recuperacionSeg) + ' pausa' : '');
+    zonas += '<tr><td>' + z.label + '</td><td class="mono">' + est + '</td><td class="mono">' + segARelojes(zz.duracionTotalSeg) + '</td></tr>';
+  });
+  const refTxt = c.refIntensidad === 'umbral' ? '% del pulso de umbral' : '% del pulso máx';
+  cont.innerHTML =
+    '<p><b>Semana ' + sem + '</b> · ' + r.horasSemana.toFixed(1) + ' h totales · carga ' + r.pctCarga + '%' + (r.enTaper ? ' · <b>afinación</b>' : '') + ' · intensidad aeróbica ' + r.zonas.pctPulsoMax.valor + refTxt + '</p>' +
+    '<table><thead><tr><th>Disciplina</th><th>Sesiones</th><th>Tiempo sem.</th></tr></thead><tbody>' + filas + '</tbody></table>' +
+    '<table style="margin-top:8px"><thead><tr><th>Zona</th><th>Estructura</th><th>Total</th></tr></thead><tbody>' + zonas + '</tbody></table>' +
+    (avisos.length ? '<p class="hint" style="color:var(--warn)">⚠ ' + avisos.join(' · ') + '</p>' : '');
+}
+
+document.getElementById('vpSemana').addEventListener('input', actualizarVistaPrevia);
+['input', 'change', 'click'].forEach((ev) => {
+  document.getElementById('formCicloCard').addEventListener(ev, (e) => {
+    if (e.target && e.target.id === 'vpSemana') return;
+    setTimeout(actualizarVistaPrevia, 0);
+  });
 });
 
 document.getElementById('btnGuardarCiclo').addEventListener('click', () => {
