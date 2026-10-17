@@ -321,8 +321,10 @@
         </div>
         <div class="btnRow" style="margin-top:8px">
           <button class="small" id="semDeshacer">Deshacer ajustes de esta semana</button>
+          <button class="small" id="semVerAyer">Ver ayer</button>
         </div>
       </div>
+      <div class="card" id="semDetalle" style="display:none"></div>
     </div>
   </section>
 
@@ -2143,6 +2145,9 @@ function leerSesionesCrudas() {
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: s.ritmoPromedioSegKm || null, watts: null, pulso: s.pulsoPromedio || null,
       tss: s.tss || 0, id: s.id || null,
+      pulsoMax: s.pulsoMax || null, cadencia: s.cadenciaPromedio || null, elevM: s.elevGanadaM || null,
+      desacoplePct: s.desacoplePct != null ? s.desacoplePct : null, efAerobica: s.efAerobica || null,
+      notas: s.notas || '', modo: s.modo || '', _puntos: s.puntos || null,
     });
   });
   tryParse('bici_sesiones').forEach((s) => {
@@ -2178,6 +2183,123 @@ function leerSesionesCrudas() {
     });
   });
   return out;
+}
+
+
+// Parciales por km a partir de los puntos compactados de Correr (t, distAcum, pulso).
+function parcialesPorKm(puntos) {
+  if (!puntos || !puntos.t || !puntos.distAcum || puntos.t.length < 3) return [];
+  const t = puntos.t, d = puntos.distAcum, p = puntos.pulso || [];
+  const out = [];
+  let kmObjetivo = 1000, tPrev = 0, iPrev = 0;
+  for (let i = 1; i < t.length; i++) {
+    while (d[i] >= kmObjetivo && out.length < 60) {
+      const frac = (kmObjetivo - d[i - 1]) / ((d[i] - d[i - 1]) || 1);
+      const tCruce = t[i - 1] + frac * (t[i] - t[i - 1]);
+      let suma = 0, n = 0;
+      for (let j = iPrev; j <= i; j++) { if (p[j] > 0) { suma += p[j]; n++; } }
+      out.push({ km: out.length + 1, seg: tCruce - tPrev, pulso: n ? Math.round(suma / n) : null });
+      tPrev = tCruce; iPrev = i; kmObjetivo += 1000;
+    }
+  }
+  return out;
+}
+
+function htmlDetalleSesion(s) {
+  const u = leerUmbrales();
+  const horas = (s.duracionSeg || 0) / 3600;
+  const IF = (s.tss > 0 && horas > 0) ? Math.sqrt(s.tss / (horas * 100)) : null;
+  const filas = [];
+  const fila = (k, v) => { if (v !== null && v !== undefined && v !== '') filas.push('<tr><td>' + k + '</td><td class="mono">' + v + '</td></tr>'); };
+  fila('Inicio', s.horaInicio);
+  fila('Duración', s.duracionSeg ? segARelojes(s.duracionSeg) : null);
+  fila('Distancia', s.distanciaM ? (s.distanciaM / 1000).toFixed(2) + ' km' : null);
+  fila('Ritmo medio', s.ritmoSegKm ? segARelojes(s.ritmoSegKm) + '/km' : null);
+  fila('Potencia', s.watts ? Math.round(s.watts) + ' W' : null);
+  fila('Pulso medio', s.pulso ? Math.round(s.pulso) + ' lpm' : null);
+  fila('Pulso máx', s.pulsoMax ? s.pulsoMax + ' lpm' : null);
+  const umbralPulso = s.deporte === 'carrera' ? u.pulsoUmbralCarrera : (s.deporte === 'bici' ? u.pulsoUmbralBici : (s.deporte === 'kayak' ? u.pulsoUmbralKayak : null));
+  if (s.pulso && umbralPulso) fila('Pulso medio / umbral', Math.round(100 * s.pulso / umbralPulso) + '%');
+  fila('Cadencia', s.cadencia ? s.cadencia + ' pasos/min' : null);
+  fila('Desnivel +', s.elevM ? s.elevM + ' m' : null);
+  fila('Desacople', s.desacoplePct != null ? Number(s.desacoplePct).toFixed(1) + '%' : null);
+  fila('Eficiencia aeróbica', s.efAerobica ? Number(s.efAerobica).toFixed(2) + ' m/min por lpm' : null);
+  fila('TSS', s.tss ? Math.round(s.tss) : null);
+  fila('IF (intensidad)', IF ? IF.toFixed(2) : null);
+  let html = '<div class="sesionCard" style="margin-bottom:6px"><div class="estructura" style="font-size:0.85rem;font-weight:600">' + (DISC_LABEL[s.deporte] || s.deporte) + (s.modo ? ' · ' + s.modo : '') + '</div>' +
+    '<table style="margin-top:4px"><tbody>' + filas.join('') + '</tbody></table>';
+  const parc = parcialesPorKm(s._puntos);
+  if (parc.length) {
+    html += '<details style="margin-top:6px"><summary style="cursor:pointer">Parciales por km</summary><table style="margin-top:4px"><tbody>' +
+      parc.map((x) => '<tr><td>km ' + x.km + '</td><td class="mono">' + segARelojes(x.seg) + '/km</td><td class="mono">' + (x.pulso ? x.pulso + ' lpm' : '') + '</td></tr>').join('') +
+      '</tbody></table></details>';
+  }
+  if (s.notas) html += '<p class="hint" style="margin-top:4px">📝 ' + String(s.notas).replace(/</g, '&lt;') + '</p>';
+  return html + '</div>';
+}
+
+// Recuperación sugerida según la carga del día. Base: bandas de TSS inspiradas en la guía de
+// Coggan/TrainingPeaks (<150 se recupera hacia el día siguiente; 150–300 deja fatiga residual a
+// los 2 días; 300–450 sigue a los 2 días; >450 varios días). Se ajusta por tu forma (CTL/TSB),
+// la intensidad (IF) y el HRV reciente. Es una heurística, no una medición.
+function calcularRecuperacion(fechaISO) {
+  const ses = leerSesionesCrudas().filter((x) => x.fecha === fechaISO);
+  if (!ses.length) return null;
+  const tss = ses.reduce((a, x) => a + (x.tss || 0), 0);
+  const horas = ses.reduce((a, x) => a + (x.duracionSeg || 0), 0) / 3600;
+  const IF = (tss > 0 && horas > 0) ? Math.sqrt(tss / (horas * 100)) : null;
+  let base, nivel;
+  if (tss < 75) { base = 12; nivel = 'baja'; }
+  else if (tss < 150) { base = 24; nivel = 'moderada'; }
+  else if (tss < 300) { base = 42; nivel = 'alta'; }
+  else if (tss < 450) { base = 60; nivel = 'muy alta'; }
+  else { base = 84; nivel = 'extrema'; }
+  let h = base;
+  const motivos = ['carga ' + nivel + ' (TSS ' + Math.round(tss) + ') → base ' + base + ' h'];
+  const est = calcularEstadoActual(leerRegistroForma(), hoyISO());
+  if (est.tieneDatos && est.ctl >= 10) {
+    if (tss >= 2 * est.ctl) { h += 24; motivos.push('+24 h: el TSS del día duplica tu CTL (' + Math.round(est.ctl) + ')'); }
+    else if (tss > 1.3 * est.ctl) { h += 12; motivos.push('+12 h: carga alta para tu CTL (' + Math.round(est.ctl) + ')'); }
+  }
+  if (IF && IF >= 0.9) { h += 12; motivos.push('+12 h: intensidad alta (IF ' + IF.toFixed(2) + ')'); }
+  const dias = Math.round((new Date(hoyISO() + 'T00:00:00') - new Date(fechaISO + 'T00:00:00')) / 86400000);
+  if (est.tieneDatos && est.tsb < -20 && dias <= 2) { h += 12; motivos.push('+12 h: TSB actual ' + Math.round(est.tsb) + ' (fatiga acumulada)'); }
+  if (dias <= 2) {
+    const reg = leerHrvRegistro().filter((r) => r.rmssdMs != null && r.fecha).sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+    const eh = calcularEstadoHrv(reg);
+    if (eh && eh.estado === 'Bajo') { h += 24; motivos.push('+24 h: HRV en estado Bajo'); }
+    else if (eh && eh.estado === 'Desequilibrado') { h += 12; motivos.push('+12 h: HRV desequilibrado'); }
+  }
+  h = Math.min(96, h);
+  // Fin de la última sesión (si no hay hora, se asume 18:00 como referencia).
+  let finMs = null;
+  ses.forEach((x) => {
+    const hh = x.horaInicio || '18:00';
+    const ini = new Date(fechaISO + 'T' + hh + ':00').getTime();
+    const fin = ini + (x.duracionSeg || 0) * 1000;
+    if (finMs === null || fin > finMs) finMs = fin;
+  });
+  const listo = new Date(finMs + h * 3600000);
+  return { tss, IF, horas: h, nivel, motivos, listo, sinHora: ses.some((x) => !x.horaInicio) };
+}
+
+function htmlRecuperacion(fechaISO) {
+  const r = calcularRecuperacion(fechaISO);
+  if (!r) return '';
+  const ahora = new Date();
+  const ya = r.listo <= ahora;
+  const cuando = r.listo.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric' }) + ' ' + String(r.listo.getHours()).padStart(2, '0') + ':' + String(r.listo.getMinutes()).padStart(2, '0');
+  return '<div class="sesionCard" style="margin:8px 0;border:1px solid ' + (ya ? '#5fb88a' : '#e0a458') + '">' +
+    '<div class="estructura" style="font-size:0.85rem;font-weight:600">🔄 Recuperación sugerida: ~' + Math.round(r.horas) + ' h</div>' +
+    '<p class="hint" style="margin:2px 0">' + (ya ? 'Según la estimación ya estarías recuperado para una sesión de calidad.' : 'Una sesión suave (zona 1–2) ya es posible; para calidad o intensidad, desde ' + cuando + ' aprox.') + (r.sinHora ? ' (sin hora de inicio de alguna sesión: se asumió 18:00)' : '') + '</p>' +
+    '<details><summary style="cursor:pointer;font-size:0.8rem">Cómo se calculó</summary><ul class="hint" style="margin:4px 0 0 16px">' + r.motivos.map((m) => '<li>' + m + '</li>').join('') + '</ul>' +
+    '<p class="hint" style="margin-top:4px">Heurística basada en bandas de TSS de Coggan/TrainingPeaks y ajustada por tu CTL, TSB y HRV. Si tu cuerpo dice otra cosa, vale más tu sensación.</p></details></div>';
+}
+
+function realDelDia(iso) {
+  const sesiones = leerSesionesCrudas().filter((x) => x.fecha === iso);
+  if (!sesiones.length) return null;
+  return { sesiones, tss: sesiones.reduce((a, x) => a + (x.tss || 0), 0) };
 }
 
 function formatSesionResumen(s) {
@@ -2309,17 +2431,15 @@ function renderCalendario() {
   }
 }
 
-function mostrarDetalleDia(iso, real) {
-  const det = document.getElementById('calDetalle');
+function mostrarDetalleDia(iso, real, destinoId) {
+  const det = document.getElementById(destinoId || 'calDetalle');
   det.style.display = 'block';
   const hoy = hoyISO();
   let html = '<h3>' + iso + (iso === hoy ? ' · hoy' : '') + '</h3>';
 
   if (real && real.sesiones.length) {
     html += '<p style="margin-bottom:4px">Real (TSS total ' + Math.round(real.tss) + '):</p>';
-    real.sesiones.forEach((s) => {
-      html += '<div class="sesionCard" style="margin-bottom:6px"><div class="estructura" style="font-size:0.8rem">' + formatSesionResumen(s) + '</div></div>';
-    });
+    real.sesiones.forEach((s) => { html += htmlDetalleSesion(s); });
     const registro = leerRegistroForma();
     const caloriasDia = registro
       .filter((r) => (r.fecha || '').slice(0, 10) === iso && r.calorias)
@@ -2327,6 +2447,7 @@ function mostrarDetalleDia(iso, real) {
     if (caloriasDia > 0) {
       html += '<p class="hint" style="margin-top:2px">🔥 ' + Math.round(caloriasDia) + ' kcal (gasto estimado, Keytel)</p>';
     }
+    html += htmlRecuperacion(iso);
   }
 
   const nut = nutricionDia(iso);
@@ -2484,8 +2605,17 @@ function colorBordeBloque(b) {
   return colorCumplimiento((entrada.duracionSeg || b.duracionSeg) / (b.duracionSeg || 1));
 }
 
+function mostrarDetalleSemana(iso) {
+  mostrarDetalleDia(iso, realDelDia(iso), 'semDetalle');
+  document.getElementById('semDetalle').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 function manejarTapBloque(bloque) {
   const hoy = hoyISO();
+  if (bloque.fechaActualISO <= hoy && DISCIPLINAS_SIN_SENSOR.indexOf(bloque.discKey) === -1) {
+    mostrarDetalleSemana(bloque.fechaActualISO);
+    return;
+  }
   if (DISCIPLINAS_SIN_SENSOR.indexOf(bloque.discKey) === -1 || bloque.fechaActualISO > hoy) return;
   const hizo = confirm('¿Hiciste "' + bloque.label + '" el ' + bloque.fechaActualISO + '?');
   const m = leerCumplimientoManual();
@@ -2624,6 +2754,10 @@ document.querySelectorAll('.vistaTab').forEach((vt) => {
   });
 });
 
+document.getElementById('semVerAyer').addEventListener('click', () => {
+  const d = new Date(hoyISO() + 'T00:00:00'); d.setDate(d.getDate() - 1);
+  mostrarDetalleSemana(sumarDiasISO(hoyISO(), -1));
+});
 document.getElementById('semPrev').addEventListener('click', () => { semanaActual.setDate(semanaActual.getDate() - 7); renderSemana(); });
 document.getElementById('semNext').addEventListener('click', () => { semanaActual.setDate(semanaActual.getDate() + 7); renderSemana(); });
 document.getElementById('semDeshacer').addEventListener('click', () => {
