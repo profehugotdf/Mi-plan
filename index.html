@@ -2110,6 +2110,7 @@ calMesActual.setDate(1);
 
 const DISC_LABEL = {};
 DISCIPLINAS.forEach((d) => { DISC_LABEL[d.key] = d.label; });
+DISC_LABEL.caminata = 'Caminata'; // llega desde Rumbo (no es disciplina del ciclo, pero suma a la Forma y se ve en el calendario)
 
 // Lee el detalle real de sesiones directo de cada app (correr_sesiones, bici_sesiones,
 // kayak_sesiones — mismo origen, localStorage compartido) y lo normaliza a una forma común.
@@ -2172,6 +2173,17 @@ function leerSesionesCrudas() {
   // como texto plano 'YYYY-MM-DD' SIN hora — a diferencia de Correr/Bici/Kayak. Pasarla por
   // fechaLocalISO()/horaDeFecha() la interpretaba como medianoche UTC y la corría un día para
   // atrás. Se usa tal cual, sin conversión, y sin hora (no existe ese dato en Fuerza).
+  // Rumbo (app de GPS): la versión web escribe rumbo_sesiones directo (mismo origen); la app instalada
+  // las manda abriendo Mi plan con el link #rumbo=… (ver importarDesdeRumbo). inicioISO = arranque real.
+  tryParse('rumbo_sesiones').forEach((s) => {
+    if (!s.inicioISO || rumboDuplicada(s)) return; // la misma salida ya la grabó Correr/Kayak/Bici: manda la app dedicada
+    out.push({
+      deporte: s.deporte, fecha: fechaLocalISO(s.inicioISO), horaInicio: horaDeFecha(s.inicioISO),
+      duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
+      ritmoSegKm: (s.deporte === 'carrera' || s.deporte === 'caminata') ? (s.ritmoSegKm || null) : null,
+      watts: s.deporte === 'bici' ? (s.npW || null) : null, pulso: s.pulsoPromedio || null, tss: s.tss || 0, id: s.id || null,
+    });
+  });
   tryParse('fuerza_sesiones').forEach((s) => {
     if (!s.fecha) return;
     const duracionSeg = s.duracionSeg != null ? s.duracionSeg : (s.duracionMin != null ? s.duracionMin * 60 : 0);
@@ -4460,7 +4472,85 @@ function renderDiagnostico() {
 }
 document.getElementById('btnRefrescarDiagnostico').addEventListener('click', renderDiagnostico);
 
+
+/* ========================= SESIONES DESDE RUMBO (app instalada) =========================
+   La app instalada de Rumbo no comparte el almacenamiento con esta página: abre Mi plan con
+   #rumbo=<base64url de {v,s:[sesiones]}>. Acá se guardan en rumbo_sesiones (upsert por id) y,
+   si hay umbral para calcular el TSS, en entrenamiento_forma_registro — misma cuenta que Rumbo web. */
+function tssRumbo(o, u) {
+  const h = (o.duracionSeg || 0) / 3600; if (!h) return null;
+  // carrera: ritmo normalizado ajustado por pendiente (Minetti, igual que Correr) sobre los segundos en movimiento
+  // bici: potencia normalizada (real o estimada por Rumbo con la física de Bici Indoor) sobre el FTP, como Bici Indoor
+  const ftp = u.ftpBici || o.ftpW;
+  if (o.deporte === 'bici' && o.npW && o.segMov && ftp) { const k = o.npW / ftp; return Math.round(100 * (o.segMov / 3600) * k * k); }
+  if (o.deporte === 'carrera' && o.ngpSegKm && o.segMov && u.ritmoUmbralCarreraSegKm) { const k = u.ritmoUmbralCarreraSegKm / o.ngpSegKm; return Math.round(100 * (o.segMov / 3600) * k * k); }
+  if (o.deporte === 'carrera' && o.ritmoSegKm && u.ritmoUmbralCarreraSegKm) { const k = u.ritmoUmbralCarreraSegKm / o.ritmoSegKm; return Math.round(100 * h * k * k); }
+  const um = o.deporte === 'kayak' ? u.pulsoUmbralKayak : o.deporte === 'bici' ? (u.pulsoUmbralBici || u.pulsoUmbralCarrera) : o.deporte === 'natacion' ? null : u.pulsoUmbralCarrera;
+  if (o.pulsoPromedio && um) { const k = o.pulsoPromedio / um; return Math.round(100 * h * k * k); }
+  return null;
+}
+// ¿Correr, Kayak o Bici Indoor ya tienen esa misma salida? (arranque a menos de 10 min). Si las dos apps
+// grabaron a la vez, cuenta la dedicada (sus datos son más finos) y la de Rumbo no suma carga.
+function rumboDuplicada(o) {
+  const t = Date.parse(o.inicioISO), cerca = (x) => x != null && isFinite(x) && Math.abs(x - t) < 10 * 60000;
+  const get = (k) => { try { return JSON.parse(localStorage.getItem(k)) || []; } catch (e) { return []; } };
+  if (o.deporte === 'carrera') return get('correr_sesiones').some((x) => cerca(x.inicioISO ? Date.parse(x.inicioISO) : Date.parse(x.fecha) - (x.duracionSeg || 0) * 1000));
+  // Kayak Indoor: las cargadas a mano quedan a las 12:00 (sin hora real) → mismo día y duración parecida (±25 %)
+  if (o.deporte === 'kayak') return get('kayak_sesiones').some((x) => /^k_manual_/.test(x.id || '')
+    ? fechaLocalISO(x.fecha) === fechaLocalISO(o.inicioISO) && Math.abs((x.duracionSeg || 0) - o.duracionSeg) <= 0.25 * o.duracionSeg
+    : cerca(Date.parse(x.fecha)));
+  if (o.deporte === 'bici') return get('bici_sesiones').some((x) => cerca(+x.date));
+  return false;
+}
+// también al revés: si Rumbo llegó primero y después grabó la app dedicada, se saca la de Rumbo del registro
+function limpiarDuplicadosRumbo() {
+  let ses = []; try { ses = JSON.parse(localStorage.getItem('rumbo_sesiones')) || []; } catch (e) {}
+  const dup = new Set(ses.filter(rumboDuplicada).map((s) => s.id)); if (!dup.size) return 0;
+  const reg = leerRegistroForma(), limpio = reg.filter((r) => !dup.has(r.id));
+  if (limpio.length !== reg.length) localStorage.setItem(LS_REGISTRO_FORMA, JSON.stringify(limpio));
+  return reg.length - limpio.length;
+}
+function importarDesdeRumbo() {
+  const m = (location.hash || '').match(/^#rumbo=([A-Za-z0-9_-]+)/);
+  if (!m) return 0;
+  let datos = null;
+  try {
+    const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((m[1].length + 3) % 4);
+    datos = JSON.parse(decodeURIComponent(escape(atob(b64))));
+  } catch (e) { toast('No pude leer las sesiones que mandó Rumbo'); return 0; }
+  history.replaceState(null, '', location.pathname + location.search);
+  const lista = (datos && datos.s) || [];
+  let ses = []; try { ses = JSON.parse(localStorage.getItem('rumbo_sesiones')) || []; } catch (e) {}
+  const registro = leerRegistroForma(), u = leerUmbrales();
+  let n = 0, sinTss = 0, dups = 0;
+  lista.forEach((o) => {
+    if (!o || !o.id || !o.inicioISO) return;
+    if (rumboDuplicada(o)) {
+      o.dup = 1; dups++; delete o.tss;
+      const i = ses.findIndex((x) => x.id === o.id); if (i >= 0) ses[i] = o; else ses.push(o);
+      const j = registro.findIndex((r) => r.id === o.id); if (j >= 0) registro.splice(j, 1);
+      n++; return;
+    }
+    const tss = tssRumbo(o, u); if (tss != null) o.tss = tss; else sinTss++;
+    const i = ses.findIndex((x) => x.id === o.id); if (i >= 0) ses[i] = o; else ses.push(o);
+    if (tss != null) {
+      const j = registro.findIndex((r) => r.id === o.id);
+      const e = Object.assign(j >= 0 ? registro[j] : {}, { fecha: fechaLocalISO(o.inicioISO), deporte: o.deporte, tss, id: o.id });
+      if (j >= 0) registro[j] = e; else registro.push(e);
+    }
+    n++;
+  });
+  ses.sort((a, b) => (a.inicioISO < b.inicioISO ? -1 : 1));
+  localStorage.setItem('rumbo_sesiones', JSON.stringify(ses.slice(-600)));
+  localStorage.setItem(LS_REGISTRO_FORMA, JSON.stringify(registro));
+  toast('📥 Llegaron ' + n + (n === 1 ? ' sesión' : ' sesiones') + ' de Rumbo' + (sinTss ? ' (' + sinTss + ' sin TSS: cargá tus umbrales en Datos)' : '') + (dups ? ' · ' + dups + ' ya estaba' + (dups === 1 ? '' : 'n') + ' en la app del deporte: no se cuenta' + (dups === 1 ? '' : 'n') + ' dos veces' : ''));
+  return n;
+}
+
 /* ========================= INIT ========================= */
+
+importarDesdeRumbo(); // antes de dibujar, así lo que mandó Rumbo ya aparece
+limpiarDuplicadosRumbo(); // si Correr/Kayak/Bici grabaron la misma salida, cuenta la de la app dedicada
 
 renderHeader();
 renderListaCiclos();
@@ -4471,6 +4561,7 @@ recalcularCalorias(); // en silencio, para capturar sesiones nuevas de las apps 
 renderHrv();
 actualizarProximoEventoCompartido();
 renderDiagnostico();
+window.addEventListener('hashchange', () => { if (importarDesdeRumbo()) { renderHoy(); recalcularCalorias(); } });
 </script>
 </body>
 </html>
