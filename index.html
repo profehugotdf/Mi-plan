@@ -1008,7 +1008,7 @@ function configDefault() {
   return {
     nombre: 'Nuevo ciclo',
     modelo: 'inversa', enfoque: 'base_aerobica', refIntensidad: 'umbral',
-    fechaInicio: new Date().toISOString().slice(0, 10),
+    fechaInicio: hoyISO(), // fecha local (antes en UTC: después de las 21 h en Argentina daba mañana)
     totalDias: 84,
     k: 0.02,
     horasSemana: { inicio: 5, fin: 10 },
