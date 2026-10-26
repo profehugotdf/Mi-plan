@@ -69,6 +69,6 @@ Todas las apps comparten `localStorage` (unos 5 MB en total para todas) y pueden
   - Rumbo: NGP con pendiente para correr, potencia estimada/FTP para bici.
   - Una salida grabada por Rumbo **y** por la app dedicada cuenta una sola vez, la de la dedicada.
 - Rumbo abre las otras apps con `#rumbo=` en el link:
-  - Bici, Correr y Kayak: `z` + base64url de JSON comprimido con deflate-raw. Bici y Correr reciben el mismo paquete (gpx con la altura, escenas, horizonte, cerros y suelo); Kayak recibe `app:'kayak'`, puntos, orillas y perfil, horizonte y cerros.
+  - Bici, Correr y Kayak: `z` + base64url de JSON comprimido con deflate-raw. Bici y Correr reciben el mismo paquete (gpx con la altura, escenas, horizonte, cerros, suelo y `land`: qué hay a cada costado cada 25 m: uso del suelo, casa más cercana con pisos y distancia, tipo de camino); Kayak recibe `app:'kayak'`, puntos, orillas y perfil, horizonte y cerros.
   - Mi plan: base64 de `{v,s:[sesiones]}`, sin comprimir.
 - Hay una app de Backup (`profehugotdf.github.io`) que exporta y restaura localStorage e IndexedDB de todas.
