@@ -19,7 +19,8 @@ Lo comparten colegas, su hermano y su primo: la terminología de entrenamiento t
 - **Lee** las claves de las otras apps: `correr_sesiones`, `bici_sesiones`, `kayak_sesiones`, `fuerza_sesiones`, `rumbo_sesiones`. Cada una tiene un formato distinto: normalizar al leer, sin asumir.
   - Correr guarda `fecha` al **terminar**, no al empezar; para el inicio, usar `inicioISO` si existe.
   - `fuerza_sesiones.fecha` es solo `AAAA-MM-DD`: no pasarla por funciones de fecha y hora.
-- **Escribe**: `plan_ciclos_v1`, `entrenamiento_umbrales`, `entrenamiento_perfil`, `entrenamiento_hrv_registro`, `entrenamiento_proximo_evento`, `entrenamiento_plan_hoy`.
+- Ciclo nuevo: si la persona no eligió todavía, un asistente pregunta qué deportes entrena y qué modelo de periodización quiere (`plan_preferencias_ciclo`). Sin elección guardada se toma la del último ciclo. `configBase()` es neutro (lineal, los 5 deportes); `configDefault()` le aplica las preferencias.
+- **Escribe**: `plan_preferencias_ciclo`, `plan_ciclos_v1`, `entrenamiento_umbrales`, `entrenamiento_perfil`, `entrenamiento_hrv_registro`, `entrenamiento_proximo_evento`, `entrenamiento_plan_hoy`.
 - Sesiones de Rumbo: `importarDesdeRumbo()`, `tssRumbo()` y `rumboDuplicada()` / `limpiarDuplicadosRumbo()`. No se cuentan dos veces las salidas que también grabó una app dedicada.
 
 ## Quién y cómo trabajamos

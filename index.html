@@ -71,6 +71,12 @@
   .panel{display:none;}
   .panel.active{display:block;}
 
+  .asChips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .asChips button{padding:8px 12px;border-radius:20px;border:1px solid var(--line);background:var(--bg-panel-2);color:inherit;font:inherit;font-weight:600;cursor:pointer}
+  .asChips button.on{background:var(--accent);color:#0a0f14;border-color:var(--accent)}
+  .asOpt{display:block;width:100%;text-align:left;margin-top:8px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg-panel-2);color:inherit;font:inherit;cursor:pointer}
+  .asOpt.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .asOpt b{display:block;margin-bottom:3px}.asOpt small{opacity:.8;line-height:1.35;display:block}
   .card{background:var(--bg-panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;}
   .card + .card{margin-top:12px;}
 
@@ -338,8 +344,24 @@
       </div>
     </div>
 
+    <!-- Asistente: lo usan otras personas, así que el primer ciclo pregunta qué deportes hace cada uno y cómo quiere periodizar -->
+    <div class="card" id="asistenteCiclo" style="display:none">
+      <h3>Antes de armar tu ciclo</h3>
+      <p class="hint" style="margin:4px 0 10px">Dos preguntas, así el ciclo arranca con lo tuyo. Después se puede cambiar todo.</p>
+      <label>1. ¿Qué deportes entrenás? <span class="hint">(tocá para elegir)</span></label>
+      <div class="asChips" id="asDeportes"></div>
+      <label style="margin-top:12px;display:block">2. ¿Cómo querés periodizar?</label>
+      <div id="asModelos"></div>
+      <p class="hint" id="asError" style="color:var(--warn,#e0a100);display:none">Elegí al menos un deporte.</p>
+      <div class="btnRow">
+        <button class="primary" id="asSeguir">Seguir</button>
+        <button id="asCancelar">Cancelar</button>
+      </div>
+    </div>
+
     <div class="card" id="formCicloCard" style="display:none">
       <h3>Configurar ciclo</h3>
+      <p class="hint" style="margin:0 0 8px"><a href="#" id="lnkAsistente" style="color:inherit">🧭 Cambiar mis deportes o el modelo de periodización</a></p>
 
       <div class="field">
         <label>Nombre del ciclo</label>
@@ -1004,10 +1026,44 @@ function guardarOverrides(ov) {
   localStorage.setItem(LS_OVERRIDES, JSON.stringify(ov));
 }
 
+// Lo usan otras personas: los deportes y el modelo de un ciclo nuevo salen de lo que eligió cada uno en el
+// asistente (plan_preferencias_ciclo). Sin elección guardada, se toman del último ciclo; si no hay ninguno,
+// el asistente pregunta antes de abrir el formulario.
+const LS_PREF_CICLO = 'plan_preferencias_ciclo';
+const DEPORTES_PLAN = [['natacion', '🏊 Natación'], ['bici', '🚴 Bici'], ['carrera', '🏃 Carrera'], ['kayak', '🛶 Kayak'], ['fuerza', '🏋️ Fuerza']];
+function prefCiclo() {
+  try { const p = JSON.parse(localStorage.getItem(LS_PREF_CICLO)); if (p && Array.isArray(p.deportes) && p.deportes.length) return p; } catch (e) {}
+  try {
+    const ids = typeof store !== 'undefined' && store && store.ciclos ? Object.keys(store.ciclos) : [];
+    if (ids.length) {
+      const c = store.ciclos[ids[ids.length - 1]], d = c.disciplinas || {};
+      const dep = Object.keys(d).filter((k) => (d[k].pctInicio || 0) + (d[k].pctFin || 0) > 0);
+      if (dep.length) return { modelo: c.modelo || 'tradicional', deportes: dep };
+    }
+  } catch (e) {}
+  return null;
+}
+// deja en el ciclo solo los deportes elegidos, con los % repartidos para que sumen 100
+function aplicarDeportes(cfg, deportes) {
+  const D = cfg.disciplinas, sel = Object.keys(D).filter((k) => deportes.includes(k));
+  if (!sel.length) return cfg;
+  Object.keys(D).forEach((k) => { if (!sel.includes(k)) Object.assign(D[k], { pctInicio: 0, pctFin: 0, sesionesInicio: 0, sesionesFin: 0, horario: [] }); });
+  for (const campo of ['pctInicio', 'pctFin']) {
+    const tot = sel.reduce((a, k) => a + (D[k][campo] || 0), 0) || 1;
+    let resto = 100;
+    sel.forEach((k, i) => { const v = i === sel.length - 1 ? resto : Math.round((D[k][campo] || 0) * 100 / tot); D[k][campo] = v; resto -= v; });
+  }
+  return cfg;
+}
 function configDefault() {
+  const cfg = configBase(), p = prefCiclo();
+  if (p) { cfg.modelo = p.modelo || cfg.modelo; aplicarDeportes(cfg, p.deportes); }
+  return cfg;
+}
+function configBase() {
   return {
     nombre: 'Nuevo ciclo',
-    modelo: 'inversa', enfoque: 'base_aerobica', refIntensidad: 'umbral',
+    modelo: 'tradicional', enfoque: 'base_aerobica', refIntensidad: 'umbral',
     fechaInicio: hoyISO(), // fecha local (antes en UTC: después de las 21 h en Argentina daba mañana)
     totalDias: 84,
     k: 0.02,
@@ -1059,7 +1115,7 @@ function migrarCiclo(config) {
     });
   }
   if (!config.zonas) return config;
-  const defaults = configDefault().zonas;
+  const defaults = configBase().zonas;
   const migradas = {};
   Object.keys(config.zonas).forEach((key) => {
     const z = config.zonas[key];
@@ -4126,7 +4182,39 @@ function renderTablaZonas() {
   });
 }
 
-document.getElementById('btnNuevoCiclo').addEventListener('click', () => abrirFormularioCiclo(null));
+document.getElementById('btnNuevoCiclo').addEventListener('click', () => { if (prefCiclo()) abrirFormularioCiclo(null); else abrirAsistenteCiclo(); });
+/* ---------- asistente del primer ciclo ---------- */
+let asSel = { deportes: [], modelo: 'tradicional' };
+function abrirAsistenteCiclo(desdeFormulario) {
+  const p = prefCiclo();
+  asSel = { deportes: p ? p.deportes.slice() : [], modelo: p ? p.modelo : 'tradicional', desdeFormulario: !!desdeFormulario };
+  const M = [['tradicional', 'Lineal progresiva', 'El volumen y la intensidad suben de a poco hasta el final. La más común para empezar.'],
+    ['inversa', 'Inversa', 'Arranca con poco volumen y más intensidad; el volumen sube y la intensidad baja hasta el evento. Útil para pruebas largas (triatlón, ultra).'],
+    ['objetivos', 'Por bloques', 'Cada ciclo tiene un foco (base, técnica, umbral, VO2 máx) y se encadenan.']];
+  const pinta = () => {
+    document.getElementById('asDeportes').innerHTML = DEPORTES_PLAN.map(([k, n]) => `<button type="button" data-k="${k}" class="${asSel.deportes.includes(k) ? 'on' : ''}">${n}</button>`).join('');
+    document.getElementById('asModelos').innerHTML = M.map(([k, n, t]) => `<button type="button" class="asOpt ${asSel.modelo === k ? 'on' : ''}" data-m="${k}"><b>${n}</b><small>${t}</small></button>`).join('');
+  };
+  pinta();
+  document.getElementById('asDeportes').onclick = (e) => { const b = e.target.closest('[data-k]'); if (!b) return; const k = b.dataset.k, i = asSel.deportes.indexOf(k); if (i >= 0) asSel.deportes.splice(i, 1); else asSel.deportes.push(k); document.getElementById('asError').style.display = 'none'; pinta(); };
+  document.getElementById('asModelos').onclick = (e) => { const b = e.target.closest('[data-m]'); if (!b) return; asSel.modelo = b.dataset.m; pinta(); };
+  document.getElementById('asistenteCiclo').style.display = 'block';
+  document.getElementById('formCicloCard').style.display = 'none';
+  document.getElementById('asistenteCiclo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+document.getElementById('asSeguir').addEventListener('click', () => {
+  if (!asSel.deportes.length) { document.getElementById('asError').style.display = 'block'; return; }
+  const orden = DEPORTES_PLAN.map((x) => x[0]);
+  localStorage.setItem(LS_PREF_CICLO, JSON.stringify({ deportes: asSel.deportes.slice().sort((a, b) => orden.indexOf(a) - orden.indexOf(b)), modelo: asSel.modelo }));
+  document.getElementById('asistenteCiclo').style.display = 'none';
+  if (asSel.desdeFormulario && cicloEnEdicion && idEnEdicion) { // ciclo ya guardado: se aplica a ese mismo
+    cicloEnEdicion.modelo = asSel.modelo; aplicarDeportes(cicloEnEdicion, asSel.deportes);
+    // se vuelve a dibujar el formulario con la copia cambiada, sin guardar: se guarda recién con "Guardar ciclo"
+    const id = idEnEdicion, guardado = store.ciclos[id]; store.ciclos[id] = cicloEnEdicion; abrirFormularioCiclo(id); store.ciclos[id] = guardado;
+  } else abrirFormularioCiclo(null);
+});
+document.getElementById('asCancelar').addEventListener('click', () => { document.getElementById('asistenteCiclo').style.display = 'none'; });
+document.getElementById('lnkAsistente').addEventListener('click', (e) => { e.preventDefault(); abrirAsistenteCiclo(true); });
 document.getElementById('btnCancelarCiclo').addEventListener('click', () => {
   document.getElementById('formCicloCard').style.display = 'none';
 });
@@ -4196,7 +4284,7 @@ function escalarZona(z, fTrab, fSer) {
 }
 
 function aplicarModeloAlCiclo(c, modelo, enfoque) {
-  const base = configDefault().zonas;
+  const base = configBase().zonas;
   const z = {};
   let pulso, fAlta, fAerob, extra = {};
   if (modelo === 'inversa') {
