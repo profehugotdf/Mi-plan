@@ -51,7 +51,7 @@
   main{max-width:720px;margin:0 auto;padding:14px 12px 24px;}
 
   .tabs{display:flex;gap:6px;margin-bottom:14px;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5;}
-  .tab{flex:1;text-align:center;padding:9px 6px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.8rem;font-weight:600;cursor:pointer;user-select:none;}
+  .tab{flex:1 1 auto;text-align:center;padding:9px 4px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.74rem;font-weight:600;cursor:pointer;user-select:none;}
   .tab.active{background:var(--accent);color:#1a1206;border-color:var(--accent);}
 
   .vistaTab{flex:1;text-align:center;padding:9px 6px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.8rem;font-weight:600;cursor:pointer;user-select:none;}
@@ -213,6 +213,65 @@
   .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ok);color:#08160f;padding:10px 18px;border-radius:20px;font-weight:700;font-size:0.85rem;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
 
+  /* --- VO2 máx estimado --- */
+  .vo2Fila{padding:10px 0;border-bottom:1px solid var(--line);}
+  .vo2Fila:last-child{border-bottom:none;}
+  .vo2Cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+  .vo2Num{font-family:var(--mono);font-size:1.5rem;font-weight:700;}
+  .vo2Un{font-size:0.7rem;color:var(--text-dim);}
+  .vo2Sub{display:flex;justify-content:space-between;gap:8px;font-size:0.76rem;color:var(--text-dim);margin-top:2px;flex-wrap:wrap;}
+  .vo2Tend{font-size:0.76rem;color:var(--text-dim);font-weight:600;}
+
+  /* --- Informe del período --- */
+  .pTabs{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto;}
+  .pTab{flex:1;text-align:center;padding:8px 4px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.74rem;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap;}
+  .pTab.active{background:var(--accent);color:#1a1206;border-color:var(--accent);}
+  .infNav{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .infNav button{width:44px;height:44px;font-size:1.2rem;}
+  .infNav button:disabled{opacity:.35;}
+  .infNavTit{flex:1;text-align:center;font-weight:700;font-size:0.9rem;}
+  .infSel{width:100%;margin-bottom:10px;padding:10px;}
+  .infFechas{display:flex;gap:8px;margin-bottom:12px;}
+  .infFechas label{flex:1;font-size:0.76rem;color:var(--text-dim);}
+  .infFechas input{width:100%;}
+  .infPortada{text-align:center;border-color:var(--accent-dim);}
+  .infPortadaTit{font-size:1.15rem;font-weight:700;color:var(--accent);}
+  .infH{font-size:1rem;margin:0 0 10px;}
+  .infSub{font-size:0.74rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;margin:12px 0 4px;}
+  .infGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+  .infGran{background:var(--bg-panel-2);border-radius:10px;padding:10px;min-width:0;}
+  .infNum{font-family:var(--mono);font-size:1.25rem;font-weight:700;color:var(--text);overflow-wrap:anywhere;}
+  .infEt{font-size:0.72rem;color:var(--text-dim);}
+  .infDelta{font-size:0.72rem;font-weight:600;}
+  .infNota{font-size:0.76rem;color:var(--text-dim);margin:6px 0 0;line-height:1.4;}
+  .infSubFila{font-size:0.72rem;color:var(--text-dim);font-weight:400;}
+  .infTabla{width:100%;border-collapse:collapse;font-size:0.8rem;margin-top:4px;}
+  .infTabla th{font-size:0.68rem;color:var(--text-dim);text-align:right;font-weight:600;padding:3px 2px;}
+  .infTabla th:first-child,.infTabla td:first-child{text-align:left;}
+  .infTabla td{text-align:right;padding:5px 2px;border-top:1px solid var(--line);font-family:var(--mono);}
+  .infTabla td:first-child{font-family:var(--sans);}
+  .infFila{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:0.85rem;}
+  .infLista .infFila:first-child{border-top:none;}
+  .infValor{font-family:var(--mono);font-weight:700;text-align:right;white-space:nowrap;}
+  .infUn{font-size:0.65rem;color:var(--text-dim);font-family:var(--sans);font-weight:400;}
+  .infTag{background:var(--accent);color:#1a1206;border-radius:8px;font-size:0.62rem;font-weight:700;padding:1px 6px;vertical-align:middle;}
+  .infBarras{display:flex;gap:6px;align-items:flex-end;height:104px;margin-top:6px;}
+  .infBarraCol{flex:1;max-width:56px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0;}
+  .infBarra{width:100%;border-radius:4px 4px 0 0;}
+  .infBarraVal{font-size:0.62rem;color:var(--text-dim);font-family:var(--mono);}
+  .infBarraEt{font-size:0.6rem;color:var(--text-dim);margin-top:2px;}
+  .infApilada{display:flex;height:18px;border-radius:9px;overflow:hidden;background:var(--bg-panel-2);}
+  .infLeyenda{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:0.74rem;margin-top:6px;}
+  .infLeyenda i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;}
+  .infPuntos{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0;}
+  .infPunto{width:16px;height:16px;border-radius:50%;display:inline-block;}
+  .infRecom{display:flex;gap:10px;background:var(--bg-panel-2);border-left:3px solid var(--accent);border-radius:8px;padding:10px;margin-top:10px;font-size:0.86rem;line-height:1.4;}
+  .infFalta{border-color:var(--accent-dim);}
+  .infFalta ul{margin:0;padding-left:18px;font-size:0.8rem;color:var(--text-dim);}
+  .infFalta li{margin-bottom:5px;}
+  .infLogro{display:flex;gap:10px;padding:5px 0;font-size:0.88rem;}
+  .infFrase{font-size:1rem;line-height:1.5;margin:12px 0;padding:12px;background:var(--bg-panel-2);border-radius:10px;border-left:3px solid var(--accent);font-style:italic;}
+
   ::-webkit-scrollbar{width:0;height:0;}
 </style>
 </head>
@@ -234,6 +293,7 @@
     <div class="tab" data-tab="ciclo">Ciclo</div>
     <div class="tab" data-tab="grafico">Gráfico</div>
     <div class="tab" data-tab="datos">Datos</div>
+    <div class="tab" data-tab="informe">Informe</div>
   </div>
 
   <!-- PLAN DE HOY -->
@@ -709,15 +769,24 @@
       <div id="ftpGraficoWrap" style="display:none">
         <svg id="ftpGrafico" viewBox="0 0 400 100" style="width:100%;height:100px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
       </div>
-      <label style="display:block;margin:10px 0 4px">VO2 máx estimado — evolución</label>
-      <p class="hint" id="vo2GraficoAviso">Se calcula de tu historial de umbrales — guardalo al menos 2 veces (en fechas distintas, o períodos distintos según el selector de arriba en Perfil) para ver el gráfico.</p>
+    </div>
+
+    <div class="card" id="cardVo2">
+      <h3>VO2 máx estimado</h3>
+      <p class="hint" style="margin-bottom:8px">⚠️ Son <b>estimaciones de campo</b>, no una medición de laboratorio: sirven para ver hacia dónde vas, no como número exacto. Cada deporte se calcula con su propio método y abajo ves de dónde sale cada cifra.</p>
+      <div id="vo2Filas"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <label style="flex:1;font-size:0.78rem;color:var(--text-dim)">Pulso en reposo (lpm)<input type="number" inputmode="numeric" id="uFcReposo" placeholder="auto" style="width:100%"></label>
+        <label style="flex:1;font-size:0.78rem;color:var(--text-dim)">Pulso máximo (lpm)<input type="number" inputmode="numeric" id="uFcMax" placeholder="auto" style="width:100%"></label>
+      </div>
+      <p class="hint" id="vo2FcDetectado" style="margin-top:4px"></p>
+      <button style="width:100%;margin-top:6px" id="btnGuardarFc">Guardar pulsos</button>
+      <p class="hint" style="margin-top:4px">Si los dejás vacíos se detectan solos (reposo de tus tests de HRV; máximo de tus sesiones, o por edad). Se usan para natación, kayak y otros deportes.</p>
+      <label style="display:block;margin:12px 0 4px">Evolución</label>
+      <p class="hint" id="vo2GraficoAviso">Se necesitan al menos 2 puntos con datos para dibujar la evolución.</p>
       <div id="vo2GraficoWrap" style="display:none">
         <svg id="vo2Grafico" viewBox="0 0 400 120" style="width:100%;height:120px;background:var(--bg-panel-2);border-radius:10px;border:1px solid var(--line)"></svg>
-        <div class="zoneLegend" style="margin-top:4px">
-          <span><span class="dot" style="background:#5fb88a"></span>carrera</span>
-          <span><span class="dot" style="background:#e0a458"></span>bici</span>
-        </div>
-        <p class="hint" style="margin-top:4px">Estimación de campo a partir de tus umbrales (ecuación ACSM para carrera, vatios/kg para bici) — no es una medición de laboratorio, tomalo como tendencia.</p>
+        <div class="zoneLegend" style="margin-top:4px" id="vo2Leyenda"></div>
       </div>
     </div>
 
@@ -769,6 +838,14 @@
       <p style="margin-bottom:10px">Elimina el ciclo seleccionado y sus ajustes de carga por día. No se puede deshacer.</p>
       <button class="danger" id="btnBorrarCiclo">Borrar ciclo activo</button>
     </div>
+  </section>
+  <section class="panel" id="panel-informe">
+    <div class="card" style="padding:12px">
+      <h3>Informe del período</h3>
+      <p class="hint" style="margin-bottom:10px">Un resumen de cómo vas: volumen, forma, mejoras, intensidad, cumplimiento, recuperación y lo que viene.</p>
+      <div id="infSelector"></div>
+    </div>
+    <div id="infCuerpo"></div>
   </section>
 </main>
 
@@ -1204,6 +1281,8 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab === 'hoy') renderHoy();
     if (tab.dataset.tab === 'calendario') renderCalendario();
+    if (tab.dataset.tab === 'datos') renderVo2Max();
+    if (tab.dataset.tab === 'informe') renderInforme();
     if (tab.dataset.tab === 'grafico') { renderPanorama(); renderGraficoCiclo(); renderProyeccionForma(); renderVolumen(); }
   });
 });
@@ -1924,26 +2003,7 @@ function cargarFormularioUmbrales() {
   }));
   dibujarGraficoSimple('ritmoGraficoWrap', 'ritmoGraficoAviso', 'ritmoGrafico', historialConKmh, 'velUmbralKmh', '#5fb88a', 1);
   dibujarGraficoSimple('ftpGraficoWrap', 'ftpGraficoAviso', 'ftpGrafico', agrupadoUmbrales, 'ftpBici', '#e0a458', 0);
-  dibujarGraficoVo2Max(u.historial || []);
-}
-
-// Estimaciones de campo (no medición de laboratorio) — a tomar como tendencia, no como número exacto.
-// Carrera: ritmo umbral -> velocidad umbral (km/h) -> se "des-escala" asumiendo que el umbral
-// ronda el 88% de la velocidad a VO2 máx (vVO2max), y de ahí la ecuación metabólica de
-// carrera del ACSM (VO2 ml/kg/min = 3.333×vel_kmh + 3.5, pendiente 0%).
-// Bici: aproximación de campo de vatios/kg de FTP a VO2 máx (10.8 ml/kg/min por vatio/kg + 7).
-function calcularVo2MaxEstimado(historialEntry, pesoKg) {
-  const out = {};
-  if (historialEntry.ritmoUmbralCarreraSegKm) {
-    const velUmbralKmh = 3600 / historialEntry.ritmoUmbralCarreraSegKm;
-    const vVo2maxKmh = velUmbralKmh / 0.88;
-    out.carrera = Math.round((3.333 * vVo2maxKmh + 3.5) * 10) / 10;
-  }
-  if (historialEntry.ftpBici && pesoKg) {
-    const wattsPorKg = historialEntry.ftpBici / pesoKg;
-    out.bici = Math.round((wattsPorKg * 10.8 + 7) * 10) / 10;
-  }
-  return out;
+  renderVo2Max();
 }
 
 // Gráfico de línea genérico y chico, reusado para ritmo umbral y FTP. `historial` ya viene
@@ -1978,44 +2038,428 @@ function dibujarGraficoSimple(idWrap, idAviso, idSvg, historial, campo, color, d
   svg.innerHTML = html;
 }
 
-function dibujarGraficoVo2Max(historial) {
+/* ========================= VO2 MÁX ESTIMADO (v. nueva) ========================= */
+/* ========================= VO2 MÁX ESTIMADO (estimaciones de campo, no de laboratorio) =========================
+   Cada deporte usa el mejor dato que haya, y la pantalla dice cuál usó y de dónde sale cada número:
+   - Bici: VO2 ≈ 10,8 × W/kg + 7 (ecuación de cicloergómetro del ACSM). Va con la POTENCIA AERÓBICA MÁXIMA, no con el FTP:
+     la mejor potencia de 5 min de las sesiones de los últimos 90 días. Si no hay ninguna (o quedó por debajo del FTP, señal
+     de que no hubo un 5 min a fondo), se usa FTP ÷ 0,75.
+   - Carrera: con test de VMA, VO2 ≈ 3,5 × VMA en km/h (Léger y Mercier, 1984). Sin test, desde el ritmo umbral (el umbral
+     ronda el 88% de la velocidad a VO2 máx; ecuación de carrera del ACSM: 3,333 × km/h + 3,5). Control: si el umbral queda
+     muy por debajo del mejor esfuerzo de 5 min (pasa cuando Correr lo calcula solo desde un rodaje suave), se avisa y se
+     usa ese mejor esfuerzo como VMA.
+   - Kayak, natación y otros: por pulso, VO2 ≈ 15,3 × FCmáx ÷ FCreposo (Uth y cols., 2004). Es el menos preciso. En kayak
+     se afina con el mejor esfuerzo de 4–6 min: si fue casi máximo, la FCmáx de kayak sale de ese esfuerzo (con el tren
+     superior el pulso máximo es más bajo que corriendo); si no, se usa la FCmáx general y se avisa.
+*/
+
+const VO2_VALIDO = [15, 90];          // fuera de este rango se descarta: casi seguro es un dato roto
+const VO2_VENTANA_P5_DIAS = 90;       // la mejor potencia de 5 min cuenta si es de los últimos 90 días (igual que las medallas de Bici)
+const VO2_VMA_VIEJO_DIAS = 120;       // un test de VMA más viejo que esto se muestra con aviso
+const VO2_RATIO_UMBRAL_BAJO = 0.78;   // velocidad umbral ÷ velocidad del mejor 5 min: por debajo de esto el umbral es sospechoso
+const VO2_KAYAK_ESFUERZO_MIN = 0.90;  // un esfuerzo de 4–6 min cuenta como "casi máximo" si su pulso medio llega al 90% de la FCmáx
+const VO2_PUNTOS_TENDENCIA = 13;      // un punto cada 30 días, hacia atrás (un año)
+const VO2_SEPARACION_TENDENCIA = 30;
+
+function vo2Redondear(v) { return Math.round(v * 10) / 10; }
+function vo2Valido(v) { return isFinite(v) && v >= VO2_VALIDO[0] && v <= VO2_VALIDO[1]; }
+
+// Último valor de un campo del historial de umbrales con fecha <= fechaISO. Sin historial que llegue hasta ahí,
+// el valor actual solo vale para hoy o el futuro (para el pasado no se inventa).
+function umbralHistoricoEn(umbrales, campo, fechaISO) {
+  const h = (umbrales.historial || []).filter((x) => x && x.fecha && x.fecha <= fechaISO && x[campo] != null && x[campo] > 0)
+    .sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+  if (h.length) return { valor: h[h.length - 1][campo], fecha: h[h.length - 1].fecha };
+  if (fechaISO >= hoyISO() && umbrales[campo] > 0) return { valor: umbrales[campo], fecha: umbrales.actualizado || null };
+  return null;
+}
+
+// Pesadas de las dos fuentes (perfil compartido y Nutrición); si coinciden en una fecha manda el perfil, igual que en Nutrición.
+function historialPesoCombinado(perfil) {
+  const mapa = {};
+  leerJsonLS('nutricion_historial_peso', []).forEach((p) => { if (p && p.fecha && p.pesoKg > 0) mapa[p.fecha] = +p.pesoKg; });
+  (perfil.historialPeso || []).forEach((p) => { if (p && p.fecha && p.pesoKg > 0) mapa[p.fecha] = +p.pesoKg; });
+  return Object.keys(mapa).sort().map((f) => ({ fecha: f, pesoKg: mapa[f] }));
+}
+function pesoEn(perfil, hist, fechaISO) {
+  let v = null;
+  for (let i = 0; i < hist.length; i++) { if (hist[i].fecha <= fechaISO) v = hist[i].pesoKg; else break; }
+  if (v == null && hist.length) v = hist[0].pesoKg;          // antes de la primera pesada: la más cercana
+  if (v == null && perfil.pesoKg > 0) v = +perfil.pesoKg;
+  return v;
+}
+
+/* ---- Pulso máximo y de reposo (los pide el cálculo por pulso) ---- */
+
+// Pulso máximo más alto de las sesiones del último año. Guarda contra picos falsos de la banda: si el más alto se
+// despega más de 6 lpm del que sigue (y hay al menos 3 sesiones), vale el que sigue.
+function pulsoMaxObservado(sesiones, hastaISO) {
+  const desde = sumarDiasISO(hastaISO, -365);
+  const vals = sesiones.filter((s) => s.pulsoMax > 100 && s.pulsoMax < 230 && s.fecha >= desde && s.fecha <= hastaISO && !(s._x && s._x.noEntrenamiento))
+    .map((s) => s.pulsoMax).sort((a, b) => b - a);
+  if (!vals.length) return null;
+  return (vals.length >= 3 && vals[0] - vals[1] > 6) ? vals[1] : vals[0];
+}
+function fcMaxEfectiva(ctx, fechaISO) {
+  const manual = +ctx.perfil.fcMax;
+  if (manual > 100 && manual < 230) return { valor: Math.round(manual), fuente: 'cargada por vos en Perfil' };
+  const obs = pulsoMaxObservado(ctx.sesiones, fechaISO);
+  if (obs) return { valor: obs, fuente: 'el pulso más alto de tus sesiones del último año' };
+  const edad = edadEfectiva(ctx.perfil);
+  if (edad) return { valor: Math.round(208 - 0.7 * edad), fuente: 'estimada por edad (208 − 0,7 × edad), porque todavía no hay un pulso máximo registrado', porEdad: true };
+  return null;
+}
+function fcReposoEfectiva(ctx, fechaISO) {
+  const manual = +ctx.perfil.fcReposo;
+  if (manual > 30 && manual < 110) return { valor: Math.round(manual), fuente: 'cargado por vos en Perfil' };
+  const desde = sumarDiasISO(fechaISO, -30);
+  const tests = ctx.hrv.filter((r) => r && r.fecha && r.fecha >= desde && r.fecha <= fechaISO && r.pulsoPromedio > 30 && r.pulsoPromedio < 110).map((r) => r.pulsoPromedio);
+  if (tests.length) return { valor: Math.round(mediana(tests)), fuente: 'mediana del pulso de ' + tests.length + (tests.length === 1 ? ' test' : ' tests') + ' de HRV en reposo (últimos 30 días)' };
+  return null;
+}
+
+/* ---- Mejores esfuerzos sobre series [{t (s), d (m acumulados), pulso}] ---- */
+
+// Mayor distancia cubierta en una ventana de W segundos. La ventana tiene que estar cubierta casi entera por datos
+// (≥ 90% de los segundos), así un corte o una pausa no se cuela como esfuerzo.
+function mejorVentanaDistancia(pts, W) {
+  if (!pts || pts.length < 5) return null;
+  let mejor = null, i = 0;
+  for (let j = 1; j < pts.length; j++) {
+    while (i < j && pts[j].t - pts[i].t > W) i++;
+    const span = pts[j].t - pts[i].t;
+    if (span < W - 2 || (j - i + 1) < 0.9 * W) continue;
+    const dist = pts[j].d - pts[i].d;
+    if (!(dist > 0)) continue;
+    if (!mejor || dist > mejor.dist) mejor = { dist, i, j, seg: span };
+  }
+  if (!mejor) return null;
+  let suma = 0, n = 0, pico = 0;
+  for (let k = mejor.i; k <= mejor.j; k++) { const p = pts[k].pulso; if (p > 0) { suma += p; n++; if (p > pico) pico = p; } }
+  return { dist: mejor.dist, seg: mejor.seg, velKmh: mejor.dist / mejor.seg * 3.6, pulsoMedio: n ? suma / n : null, pulsoPico: pico || null, t0: pts[mejor.i].t };
+}
+// Menor tiempo para cubrir D metros (el arranque se interpola entre dos puntos). vMaxMs descarta saltos de GPS imposibles.
+function mejorTiempoDistancia(pts, D, vMaxMs) {
+  if (!pts || pts.length < 5) return null;
+  let mejor = null, i = 0;
+  for (let j = 1; j < pts.length; j++) {
+    if (pts[j].d - pts[0].d < D) continue;
+    while (i + 1 < j && pts[j].d - pts[i + 1].d >= D) i++;
+    const dIni = pts[j].d - D, a = pts[i], b = pts[i + 1];
+    let tIni = a.t;
+    if (b.d > a.d && dIni > a.d) tIni = a.t + (b.t - a.t) * (dIni - a.d) / (b.d - a.d);
+    const tiempo = pts[j].t - tIni;
+    if (!(tiempo > 0)) continue;
+    if (vMaxMs && D / tiempo > vMaxMs) continue;
+    if (mejor == null || tiempo < mejor) mejor = tiempo;
+  }
+  return mejor;
+}
+function ptsKayak(s) {
+  const p = s._puntos;
+  if (!p || !p.length) return null;
+  return p.filter((x) => x && x.t != null && x.distAcum != null).map((x) => ({ t: x.t, d: x.distAcum, pulso: x.pulso || 0 })).sort((a, b) => a.t - b.t);
+}
+// Mejor ventana de W segundos de una sesión de kayak, calculada una sola vez por sesión (la serie de tendencia la pide muchas veces).
+function kayakVentanaSesion(s, W) {
+  if (!s._kv) s._kv = {};
+  if (!(W in s._kv)) { const pts = ptsKayak(s); s._kv[W] = pts ? mejorVentanaDistancia(pts, W) : null; }
+  return s._kv[W];
+}
+// Mejor esfuerzo de ~5 min en kayak entre las sesiones con fecha en [desdeISO, hastaISO]. Si ninguna sesión tiene una
+// ventana de 5 min completa, se prueba con 4 y después con 6 (el pedido es "4–6 min").
+function kayakMejorEsfuerzo(ctx, desdeISO, hastaISO) {
+  const ses = ctx.sesiones.filter((s) => s.deporte === 'kayak' && s.fecha >= desdeISO && s.fecha <= hastaISO && !(s._x && s._x.noEntrenamiento) && s._puntos);
+  for (const W of [300, 240, 360]) {
+    let mejor = null;
+    ses.forEach((s) => {
+      const r = kayakVentanaSesion(s, W);
+      if (r && (!mejor || r.dist > mejor.dist)) mejor = Object.assign({}, r, { fecha: s.fecha, sesionId: s.id });
+    });
+    if (mejor) return mejor;
+  }
+  return null;
+}
+
+/* ---- Carrera ---- */
+
+// Tests de VMA: los de cada sesión de Correr (testVma) y el último guardado aparte (correr_vma_test).
+function vmaTests(ctx) {
+  const out = [];
+  ctx.sesiones.forEach((s) => { if (s.deporte === 'carrera' && s._x && s._x.testVma > 0) out.push({ fecha: s.fecha, vma: +s._x.testVma }); });
+  const t = ctx.correrVmaTest;
+  if (t && t.velocidadKmh > 0 && t.fecha) {
+    const repetido = out.some((o) => Math.abs(diasEntreISO(o.fecha, t.fecha)) <= 1 && Math.abs(o.vma - t.velocidadKmh) < 0.05);
+    if (!repetido) out.push({ fecha: t.fecha, vma: +t.velocidadKmh });
+  }
+  return out.sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+}
+// VMA que Correr infiere de los mejores esfuerzos: el de 5 min o, si no hay, el de 8.
+function vmaDeMejoresEsfuerzos(mejores) {
+  if (!Array.isArray(mejores)) return null;
+  const m = mejores.find((x) => x && x.duracionSeg === 300 && x.distM > 0) || mejores.find((x) => x && x.duracionSeg === 480 && x.distM > 0);
+  return m ? { velKmh: m.distM / m.duracionSeg * 3.6, minutos: m.duracionSeg / 60 } : null;
+}
+function vo2Carrera(ctx, fechaISO) {
+  const tests = vmaTests(ctx).filter((t) => t.fecha <= fechaISO);
+  if (tests.length) {
+    const t = tests[tests.length - 1], v = vo2Redondear(3.5 * t.vma);
+    if (vo2Valido(v)) {
+      const dias = diasEntreISO(t.fecha, fechaISO);
+      return {
+        valor: v, metodo: 'vma', metodoTxt: 'test de VMA',
+        fuente: 'VMA de ' + fmtN(t.vma, 1) + ' km/h medida en el test del ' + fechaCorta(t.fecha),
+        formula: '3,5 × ' + fmtN(t.vma, 1) + ' km/h = ' + fmtN(v, 1),
+        fechaDato: t.fecha,
+        avisos: dias > VO2_VMA_VIEJO_DIAS ? ['El test tiene ' + Math.round(dias / 7) + ' semanas: repetilo para actualizar el número.'] : [],
+      };
+    }
+  }
+  const um = umbralHistoricoEn(ctx.umbrales, 'ritmoUmbralCarreraSegKm', fechaISO);
+  if (!um) return null;
+  const velUmbral = 3600 / um.valor;
+  const avisos = [];
+  const mejor5 = fechaISO >= hoyISO() ? vmaDeMejoresEsfuerzos(ctx.correrMejores) : null;
+  if (mejor5) {
+    const ratio = velUmbral / mejor5.velKmh;
+    if (ratio < VO2_RATIO_UMBRAL_BAJO) {
+      const origen = ctx.correrZonas && ctx.correrZonas.origenUmbral;
+      const detalle = 'Tu umbral (' + segARelojes(Math.round(um.valor)) + '/km, ' + fmtN(velUmbral, 1) + ' km/h) queda muy por debajo de tu mejor esfuerzo de ' + Math.round(mejor5.minutos) + ' min (' + fmtN(mejor5.velKmh, 1) + ' km/h).';
+      if (!origen || origen === 'auto') {
+        const v = vo2Redondear(3.5 * mejor5.velKmh);
+        if (vo2Valido(v)) {
+          return {
+            valor: v, metodo: 'mejor5', metodoTxt: 'mejor esfuerzo de ' + Math.round(mejor5.minutos) + ' min',
+            fuente: 'VMA estimada de tu mejor esfuerzo de ' + Math.round(mejor5.minutos) + ' min: ' + fmtN(mejor5.velKmh, 1) + ' km/h',
+            formula: '3,5 × ' + fmtN(mejor5.velKmh, 1) + ' km/h = ' + fmtN(v, 1),
+            fechaDato: null,
+            avisos: [detalle + ' Parece calculado de un rodaje suave: usé el mejor esfuerzo. Un test de VMA o de umbral en Correr lo deja mejor.'],
+          };
+        }
+      } else {
+        avisos.push(detalle + ' Fue medido o cargado a mano, así que lo respeté; si no te cierra, revisalo en Correr.');
+      }
+    }
+  }
+  const vVo2 = velUmbral / 0.88;
+  const v = vo2Redondear(3.333 * vVo2 + 3.5);
+  if (!vo2Valido(v)) return null;
+  return {
+    valor: v, metodo: 'umbral', metodoTxt: 'ritmo umbral',
+    fuente: 'ritmo umbral de ' + segARelojes(Math.round(um.valor)) + '/km (' + fmtN(velUmbral, 1) + ' km/h)',
+    formula: '(umbral ÷ 0,88) = ' + fmtN(vVo2, 1) + ' km/h → 3,333 × ' + fmtN(vVo2, 1) + ' + 3,5 = ' + fmtN(v, 1),
+    fechaDato: um.fecha, avisos,
+  };
+}
+
+/* ---- Bici ---- */
+
+function vo2Bici(ctx, fechaISO) {
+  const peso = pesoEn(ctx.perfil, ctx.pesos, fechaISO);
+  if (!peso) return { falta: 'peso', faltaTxt: 'Falta tu peso: cargalo en Perfil.' };
+  const desde = sumarDiasISO(fechaISO, -(VO2_VENTANA_P5_DIAS - 1));
+  let mejor = null;
+  ctx.sesiones.forEach((s) => {
+    if (s.deporte !== 'bici' || s.fecha < desde || s.fecha > fechaISO || !s._x || !s._x.peaks || !(s._x.peaks.p300 > 0)) return;
+    if (!mejor || s._x.peaks.p300 > mejor.w) mejor = { w: s._x.peaks.p300, fecha: s.fecha };
+  });
+  const ftp = umbralHistoricoEn(ctx.umbrales, 'ftpBici', fechaISO);
+  const avisos = [];
+  let W = null, metodo, metodoTxt, fuente, fechaDato = null;
+  if (mejor && ftp && mejor.w < ftp.valor) {
+    avisos.push('Tu mejor 5 min (' + Math.round(mejor.w) + ' W) quedó por debajo del FTP (' + Math.round(ftp.valor) + ' W): no hubo un 5 min a fondo. Usé FTP ÷ 0,75; con un 5 min a fondo el número mejora.');
+    mejor = null;
+  }
+  if (mejor) {
+    W = mejor.w; metodo = 'p5'; metodoTxt = 'mejor 5 min de potencia'; fechaDato = mejor.fecha;
+    fuente = 'mejor potencia de 5 min: ' + Math.round(W) + ' W (' + fechaCorta(mejor.fecha) + ') ÷ ' + fmtN(peso, 1) + ' kg';
+  } else if (ftp) {
+    W = ftp.valor / 0.75; metodo = 'ftp'; metodoTxt = 'FTP ÷ 0,75'; fechaDato = ftp.fecha;
+    fuente = 'FTP de ' + Math.round(ftp.valor) + ' W ÷ 0,75 = ' + Math.round(W) + ' W (potencia aeróbica máxima estimada) ÷ ' + fmtN(peso, 1) + ' kg';
+    if (!avisos.length) avisos.push('Sin sesiones con mejor 5 min registrado en los últimos 90 días: se estima desde el FTP. Una sesión de Bici con un 5 min a fondo lo afina.');
+  } else {
+    return { falta: 'potencia', faltaTxt: 'Falta potencia: hacé un 5 min a fondo en Bici o cargá tu FTP en Umbrales.' };
+  }
+  const v = vo2Redondear(10.8 * (W / peso) + 7);
+  if (!vo2Valido(v)) return { falta: 'rango', faltaTxt: 'El resultado (' + fmtN(v, 1) + ') cae fuera de lo creíble: revisá el peso y la potencia cargados.' };
+  return { valor: v, metodo, metodoTxt, fuente, formula: '10,8 × ' + fmtN(W / peso, 2) + ' W/kg + 7 = ' + fmtN(v, 1), fechaDato, avisos };
+}
+
+/* ---- Por pulso (kayak, natación y cualquier otro deporte) ---- */
+
+function vo2PorPulso(ctx, fechaISO, deporte) {
+  const rep = fcReposoEfectiva(ctx, fechaISO);
+  let max = fcMaxEfectiva(ctx, fechaISO);
+  if (!rep) return { falta: 'reposo', faltaTxt: 'Falta tu pulso en reposo: cargalo en Perfil o hacé unos tests de HRV en reposo.' };
+  if (!max) return { falta: 'maximo', faltaTxt: 'Falta tu pulso máximo: cargalo en Perfil o cargá tu fecha de nacimiento para estimarlo.' };
+  const avisos = [], extra = {};
+  let usadoKayak = false;
+  if (deporte === 'kayak') {
+    const desde = sumarDiasISO(fechaISO, -89);
+    const e = kayakMejorEsfuerzo(ctx, desde, fechaISO);
+    if (e && e.pulsoMedio) {
+      extra.esfuerzo = e;
+      const casiMax = e.pulsoMedio >= VO2_KAYAK_ESFUERZO_MIN * max.valor;
+      extra.casiMax = casiMax;
+      if (casiMax && e.pulsoPico) {
+        usadoKayak = true;
+        max = { valor: Math.round(e.pulsoPico), fuente: 'el pulso más alto de tu mejor esfuerzo de ' + fmtN(e.seg / 60, 0) + ' min en kayak (' + fechaCorta(e.fecha) + ')' };
+      } else {
+        avisos.push('Tu mejor esfuerzo de ' + fmtN(e.seg / 60, 0) + ' min en kayak llegó al ' + Math.round(100 * e.pulsoMedio / max.valor) + '% de tu pulso máximo: no fue casi máximo, así que usé la FCmáx general. Un 5 min a fondo en kayak afina el número.');
+      }
+    } else {
+      avisos.push('No hay un esfuerzo de 4–6 min en kayak con pulso en los últimos 90 días: usé la FCmáx general. Un 5 min a fondo afina el número.');
+    }
+  }
+  if (max.porEdad) avisos.push('La FCmáx es una estimación por edad: si la conocés, cargala en Perfil para un número más fiel.');
+  const v = vo2Redondear(15.3 * max.valor / rep.valor);
+  if (!vo2Valido(v)) return { falta: 'rango', faltaTxt: 'El resultado (' + fmtN(v, 1) + ') cae fuera de lo creíble: revisá el pulso máximo y el de reposo.' };
+  avisos.push('Es la estimación menos precisa: sale solo de dos pulsos, sin medir esfuerzo ni velocidad.');
+  return {
+    valor: v, metodo: usadoKayak ? 'uth_kayak' : 'uth', metodoTxt: usadoKayak ? 'por pulso, afinado con tu mejor 5 min en kayak' : 'por pulso (Uth)',
+    fuente: 'FCmáx ' + max.valor + ' lpm (' + max.fuente + ') y pulso en reposo ' + rep.valor + ' lpm (' + rep.fuente + ')',
+    formula: '15,3 × ' + max.valor + ' ÷ ' + rep.valor + ' = ' + fmtN(v, 1),
+    fechaDato: null, avisos, extra, fcMax: max.valor, fcReposo: rep.valor,
+  };
+}
+
+/* ---- Todo junto + tendencia ---- */
+
+function vo2Contexto() {
+  const perfil = leerPerfil();
+  return {
+    sesiones: leerSesionesCrudas(), umbrales: leerUmbrales(), perfil, pesos: historialPesoCombinado(perfil),
+    hrv: leerHrvRegistro(), correrVmaTest: leerJsonLS('correr_vma_test', null), correrZonas: leerJsonLS('correr_zonas', null),
+    correrMejores: leerJsonLS('correr_mejores_esfuerzos', []),
+  };
+}
+function vo2Estimaciones(ctx, fechaISO) {
+  const hayKayak = ctx.sesiones.some((s) => s.deporte === 'kayak' && !(s._x && s._x.noEntrenamiento));
+  return {
+    carrera: vo2Carrera(ctx, fechaISO),
+    bici: vo2Bici(ctx, fechaISO),
+    kayak: hayKayak ? vo2PorPulso(ctx, fechaISO, 'kayak') : null,
+    pulso: vo2PorPulso(ctx, fechaISO, 'otros'),
+  };
+}
+function vo2Serie(ctx) {
+  const hoy = hoyISO(), puntos = [];
+  for (let k = VO2_PUNTOS_TENDENCIA - 1; k >= 0; k--) {
+    const fecha = sumarDiasISO(hoy, -k * VO2_SEPARACION_TENDENCIA);
+    puntos.push({ fecha, est: vo2Estimaciones(ctx, fecha) });
+  }
+  return puntos;
+}
+// Cambio entre el valor de hoy y el punto más cercano a 4 semanas o más atrás (o el más viejo disponible, si pasaron ≥ 2 semanas).
+function vo2Tendencia(serie, clave) {
+  const vals = serie.map((p) => ({ fecha: p.fecha, v: p.est[clave] && p.est[clave].valor != null ? p.est[clave].valor : null })).filter((x) => x.v != null);
+  if (vals.length < 2) return null;
+  const ult = vals[vals.length - 1];
+  let ref = null;
+  for (let i = vals.length - 2; i >= 0; i--) { if (diasEntreISO(vals[i].fecha, ult.fecha) >= 28) { ref = vals[i]; break; } }
+  if (!ref) { ref = vals[0]; if (diasEntreISO(ref.fecha, ult.fecha) < 14) return null; }
+  return { delta: vo2Redondear(ult.v - ref.v), dias: diasEntreISO(ref.fecha, ult.fecha), desde: ref.fecha };
+}
+
+/* ---- Pantalla ---- */
+
+const VO2_FILAS = [
+  { clave: 'carrera', icono: '🏃', nombre: 'Carrera', color: '#5fb88a' },
+  { clave: 'bici', icono: '🚴', nombre: 'Bici', color: '#e0a458' },
+  { clave: 'kayak', icono: '🛶', nombre: 'Kayak', color: '#d9705a' },
+  { clave: 'pulso', icono: '❤️', nombre: 'Natación y otros (por pulso)', color: '#b587c9' },
+];
+
+function htmlTendenciaVo2(t) {
+  if (!t) return '<span class="vo2Tend">sin tendencia todavía</span>';
+  const sem = Math.max(1, Math.round(t.dias / 7));
+  if (Math.abs(t.delta) < 0.3) return '<span class="vo2Tend">▬ estable en ' + sem + ' sem.</span>';
+  return '<span class="vo2Tend" style="color:' + (t.delta > 0 ? 'var(--ok)' : 'var(--warn)') + '">' + (t.delta > 0 ? '▲ +' : '▼ −') + fmtN(Math.abs(t.delta), 1) + ' en ' + sem + ' sem.</span>';
+}
+
+function renderVo2Max() {
+  const cont = document.getElementById('vo2Filas');
+  if (!cont) return;
+  let ctx, hoy, serie, est;
+  try {
+    ctx = vo2Contexto(); hoy = hoyISO(); serie = vo2Serie(ctx); est = serie[serie.length - 1].est;
+  } catch (e) {
+    cont.innerHTML = '<p class="hint" style="color:var(--warn)">No pude calcular el VO2 máx: ' + esc(e.message) + '</p>';
+    return;
+  }
+  // Pulso en reposo / máximo detectados, para el formulario
+  const rep = fcReposoEfectiva(Object.assign({}, ctx, { perfil: Object.assign({}, ctx.perfil, { fcReposo: null }) }), hoy);
+  const max = fcMaxEfectiva(Object.assign({}, ctx, { perfil: Object.assign({}, ctx.perfil, { fcMax: null }) }), hoy);
+  const elRep = document.getElementById('uFcReposo'), elMax = document.getElementById('uFcMax');
+  if (elRep && document.activeElement !== elRep) elRep.value = ctx.perfil.fcReposo || '';
+  if (elMax && document.activeElement !== elMax) elMax.value = ctx.perfil.fcMax || '';
+  document.getElementById('vo2FcDetectado').textContent =
+    'Detectado: reposo ' + (rep ? rep.valor + ' lpm (' + rep.fuente + ')' : 'nada todavía') + ' · máximo ' + (max ? max.valor + ' lpm (' + max.fuente + ')' : 'nada todavía') + '.';
+
+  let html = '', hubo = false;
+  VO2_FILAS.forEach((f) => {
+    const e = est[f.clave];
+    if (!e) return;
+    hubo = true;
+    if (e.falta) {
+      html += '<div class="vo2Fila"><div class="vo2Cab"><span>' + f.icono + ' <b>' + f.nombre + '</b></span><span class="vo2Num" style="color:var(--text-dim)">—</span></div><p class="hint">' + esc(e.faltaTxt) + '</p></div>';
+      return;
+    }
+    const t = vo2Tendencia(serie, f.clave);
+    html += '<div class="vo2Fila"><div class="vo2Cab"><span>' + f.icono + ' <b>' + f.nombre + '</b></span>' +
+      '<span><span class="vo2Num" style="color:' + f.color + '">' + fmtN(e.valor, 1) + '</span> <span class="vo2Un">ml/kg/min</span></span></div>' +
+      '<div class="vo2Sub"><span>' + esc(e.metodoTxt) + '</span>' + htmlTendenciaVo2(t) + '</div>' +
+      '<p class="hint" style="margin-top:3px">Sale de: ' + esc(e.fuente) + '.</p>' +
+      e.avisos.map((a) => '<p class="hint" style="color:var(--accent);margin-top:3px">⚠️ ' + esc(a) + '</p>').join('') +
+      '<details style="margin-top:4px"><summary style="cursor:pointer;font-size:0.76rem;color:var(--text-dim)">Cómo se calculó</summary>' +
+      '<p class="hint mono" style="margin-top:4px">' + esc(e.formula) + '</p></details></div>';
+  });
+  if (!hubo) html = '<p class="hint">Todavía no hay datos para estimar: cargá tu FTP, tu ritmo umbral o tu pulso en reposo.</p>';
+  cont.innerHTML = html;
+  dibujarGraficoVo2Max(serie);
+}
+
+function dibujarGraficoVo2Max(serie) {
   const wrap = document.getElementById('vo2GraficoWrap');
   const aviso = document.getElementById('vo2GraficoAviso');
-  const perfil = leerPerfil();
-  const agrupado = agruparHistorialPorPeriodo(historial, periodoHistorial, ['ritmoUmbralCarreraSegKm', 'ftpBici', 'pulsoUmbralKayak', 'pulsoUmbralBici', 'pulsoUmbralCarrera']);
-  const puntos = (agrupado || [])
-    .map((h) => ({ fecha: h.fecha, vo2: calcularVo2MaxEstimado(h, perfil.pesoKg) }))
-    .filter((p) => p.vo2.carrera != null || p.vo2.bici != null);
-  if (puntos.length < 2) { wrap.style.display = 'none'; aviso.style.display = 'block'; return; }
-  wrap.style.display = 'block';
-  aviso.style.display = 'none';
-
+  const lineas = VO2_FILAS.map((f) => ({ f, pts: serie.map((p, i) => ({ i, v: p.est[f.clave] && p.est[f.clave].valor != null ? p.est[f.clave].valor : null })).filter((x) => x.v != null) }))
+    .filter((l) => l.pts.length >= 2);
+  if (!lineas.length) { wrap.style.display = 'none'; aviso.style.display = 'block'; return; }
+  wrap.style.display = 'block'; aviso.style.display = 'none';
   const svg = document.getElementById('vo2Grafico');
-  const padL = 32, padR = 8, padT = 10, padB = 18;
-  const W = 400, H = 120;
+  const padL = 32, padR = 8, padT = 10, padB = 18, W = 400, H = 120;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-
   const valores = [];
-  puntos.forEach((p) => { if (p.vo2.carrera != null) valores.push(p.vo2.carrera); if (p.vo2.bici != null) valores.push(p.vo2.bici); });
-  const minV = Math.min.apply(null, valores), maxV = Math.max.apply(null, valores);
-  const rango = (maxV - minV) || 1;
-
-  const xAt = (i) => padL + (puntos.length > 1 ? (i / (puntos.length - 1)) * plotW : 0);
+  lineas.forEach((l) => l.pts.forEach((p) => valores.push(p.v)));
+  const minV = Math.min.apply(null, valores), maxV = Math.max.apply(null, valores), rango = (maxV - minV) || 1;
+  const xAt = (i) => padL + (i / (serie.length - 1)) * plotW;
   const yAt = (v) => padT + (1 - (v - minV) / rango) * plotH;
-
-  function linea(color, campo) {
-    const pts = [];
-    puntos.forEach((p, i) => { if (p.vo2[campo] != null) pts.push(xAt(i).toFixed(1) + ',' + yAt(p.vo2[campo]).toFixed(1)); });
-    if (pts.length < 2) return '';
-    return '<path d="M' + pts.join(' L') + '" fill="none" stroke="' + color + '" stroke-width="2"></path>';
-  }
-  let html = linea('#5fb88a', 'carrera') + linea('#e0a458', 'bici');
-  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + etiquetaPeriodo(puntos[0].fecha, periodoHistorial) + '</text>';
-  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + etiquetaPeriodo(puntos[puntos.length - 1].fecha, periodoHistorial) + '</text>';
+  let html = '';
+  lineas.forEach((l) => {
+    html += '<path d="M' + l.pts.map((p) => xAt(p.i).toFixed(1) + ',' + yAt(p.v).toFixed(1)).join(' L') + '" fill="none" stroke="' + l.f.color + '" stroke-width="2"></path>';
+    const u = l.pts[l.pts.length - 1];
+    html += '<circle cx="' + xAt(u.i).toFixed(1) + '" cy="' + yAt(u.v).toFixed(1) + '" r="3" fill="' + l.f.color + '"></circle>';
+  });
+  const dm = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7);
+  html += '<text x="' + padL + '" y="' + (H - 4) + '" font-size="9" fill="#8ea3b3" font-family="monospace">' + dm(serie[0].fecha) + '</text>';
+  html += '<text x="' + (W - padR) + '" y="' + (H - 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + dm(serie[serie.length - 1].fecha) + '</text>';
   html += '<text x="' + (padL - 4) + '" y="' + (padT + 4) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + maxV.toFixed(0) + '</text>';
   html += '<text x="' + (padL - 4) + '" y="' + (padT + plotH) + '" text-anchor="end" font-size="9" fill="#8ea3b3" font-family="monospace">' + minV.toFixed(0) + '</text>';
   svg.innerHTML = html;
+  document.getElementById('vo2Leyenda').innerHTML = lineas.map((l) => '<span><span class="dot" style="background:' + l.f.color + '"></span>' + l.f.nombre.split(' (')[0].toLowerCase() + '</span>').join('');
 }
+
+document.getElementById('btnGuardarFc').addEventListener('click', () => {
+  const p = leerPerfil(); // objeto completo: no pisar lo que escriben las otras apps
+  const rep = parseFloat(document.getElementById('uFcReposo').value), max = parseFloat(document.getElementById('uFcMax').value);
+  if (rep > 0 && (rep < 30 || rep > 110)) { toast('El pulso en reposo tiene que estar entre 30 y 110'); return; }
+  if (max > 0 && (max < 100 || max > 230)) { toast('El pulso máximo tiene que estar entre 100 y 230'); return; }
+  if (rep > 0) p.fcReposo = Math.round(rep); else delete p.fcReposo;
+  if (max > 0) p.fcMax = Math.round(max); else delete p.fcMax;
+  guardarPerfil(p);
+  renderVo2Max();
+  toast('Pulsos guardados ✓');
+});
 
 // Lee las claves privadas reales de Correr/Bici/Kayak (mismo origen) y precarga el
 // formulario de umbrales — no guarda solo; el usuario confirma con "Guardar umbrales".
@@ -2205,6 +2649,8 @@ function leerSesionesCrudas() {
       pulsoMax: s.pulsoMax || null, cadencia: s.cadenciaPromedio || null, elevM: s.elevGanadaM || null,
       desacoplePct: s.desacoplePct != null ? s.desacoplePct : null, efAerobica: s.efAerobica || null,
       notas: s.notas || '', modo: s.modo || '', _puntos: s.puntos || null,
+      // extras para VO2 máx e Informe (aditivo: nadie más los lee)
+      _x: { umbralPulso: s.umbralPulso || null, testVma: (s.testVma && s.testVma.velocidadKmh > 0) ? s.testVma.velocidadKmh : null },
     });
   });
   tryParse('bici_sesiones').forEach((s) => {
@@ -2214,6 +2660,8 @@ function leerSesionesCrudas() {
       duracionSeg: Math.round(s.dur || 0), distanciaM: s.dist || null,
       ritmoSegKm: null, watts: s.np || null, pulso: s.hrAvg || null,
       tss: s.tss || 0, id: s.date || null, // bici usa el propio timestamp `date` como id en el registro compartido
+      pulsoMax: s.hrMax || null,
+      _x: { peaks: s.peaks || null, best20Power: s.best20Power || null, zonesP: s.zonesP || null, zonesHR: s.zonesHR || null },
     });
   });
   tryParse('kayak_sesiones').forEach((s) => {
@@ -2223,6 +2671,9 @@ function leerSesionesCrudas() {
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: null, watts: null, pulso: s.pulsoPromedio || null,
       tss: s.tss || 0, id: s.id || null,
+      pulsoMax: s.pulsoMax || null, _puntos: (s.puntos && s.puntos.length) ? s.puntos : null,
+      // las sesiones de calibración (RPM, frenada) no son entrenamiento: no cuentan para récords ni VO2 máx
+      _x: { noEntrenamiento: !!(s.esCalibracion || s.esCalibracionFrenada) },
     });
   });
   // Fuerza: confirmado contra el archivo real (index_fuerza_16.html). Guarda fecha=hoyISO()
@@ -2238,6 +2689,7 @@ function leerSesionesCrudas() {
       duracionSeg: s.duracionSeg || 0, distanciaM: s.distanciaM || null,
       ritmoSegKm: (s.deporte === 'carrera' || s.deporte === 'caminata') ? (s.ritmoSegKm || null) : null,
       watts: s.deporte === 'bici' ? (s.npW || null) : null, pulso: s.pulsoPromedio || null, tss: s.tss || 0, id: s.id || null,
+      pulsoMax: s.pulsoMax || null,
     });
   });
   tryParse('fuerza_sesiones').forEach((s) => {
@@ -2247,7 +2699,7 @@ function leerSesionesCrudas() {
       deporte: 'fuerza', fecha: String(s.fecha).slice(0, 10), horaInicio: null,
       duracionSeg, distanciaM: null,
       ritmoSegKm: null, watts: null, pulso: s.pulsoPromedio || null,
-      tss: s.tss || 0, id: s.id || null,
+      tss: s.tss || 0, id: s.id || null, pulsoMax: s.pulsoMax || null,
     });
   });
   return out;
@@ -3629,7 +4081,10 @@ document.getElementById('btnConfirmarFit').addEventListener('click', () => {
     const id = 'garmin_' + s.idFuente;
     const idx = registro.findIndex((r) => r.id === id);
     const entrada = { fecha: s.fecha, deporte: disciplina, tss, id };
-    if (idx !== -1) registro[idx] = entrada; else registro.push(entrada);
+    // duración y distancia: las usa el Informe del período (horas y km de natación y de lo importado de Garmin)
+    if (s.duracionSeg > 0) entrada.duracionSeg = Math.round(s.duracionSeg);
+    if (s.distM > 0) entrada.distanciaM = Math.round(s.distM);
+    if (idx !== -1) registro[idx] = Object.assign({}, registro[idx], entrada); else registro.push(entrada);
     importadas++;
   });
   localStorage.setItem(LS_REGISTRO_FORMA, JSON.stringify(registro));
@@ -4633,6 +5088,1141 @@ function importarDesdeRumbo() {
   localStorage.setItem(LS_REGISTRO_FORMA, JSON.stringify(registro));
   toast('📥 Llegaron ' + n + (n === 1 ? ' sesión' : ' sesiones') + ' de Rumbo' + (sinTss ? ' (' + sinTss + ' sin TSS: cargá tus umbrales en Datos)' : '') + (dups ? ' · ' + dups + ' ya estaba' + (dups === 1 ? '' : 'n') + ' en la app del deporte: no se cuenta' + (dups === 1 ? '' : 'n') + ' dos veces' : ''));
   return n;
+}
+
+/* ========================= INFORME DEL PERÍODO: UTILIDADES ========================= */
+
+// Todo con fechas ISO 'AAAA-MM-DD' y aritmética en UTC sobre la fecha pelada: no depende del huso del teléfono ni del horario de verano.
+function leerJsonLS(clave, def) {
+  try { const v = JSON.parse(localStorage.getItem(clave)); return v == null ? def : v; } catch (e) { return def; }
+}
+function utcDeISO(iso) { const p = String(iso).slice(0, 10).split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); }
+function diasEntreISO(a, b) { return Math.round((utcDeISO(b) - utcDeISO(a)) / 86400000); }
+function diaSemanaISO(iso) { return new Date(utcDeISO(iso)).getUTCDay(); }
+function inicioSemanaISO(iso) { return sumarDiasISO(iso, -diaSemanaISO(iso)); }   // domingo, igual que el calendario
+function rangoDiasISO(desde, hasta) { const out = []; for (let d = desde; d <= hasta; d = sumarDiasISO(d, 1)) out.push(d); return out; }
+function diasDelMes(anio, mes1a12) { return new Date(Date.UTC(anio, mes1a12, 0)).getUTCDate(); }
+function mediana(arr) {
+  if (!arr.length) return null;
+  const s = arr.slice().sort((a, b) => a - b), m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+function sumaArr(arr) { return arr.reduce((a, b) => a + b, 0); }
+function promedioArr(arr) { return arr.length ? sumaArr(arr) / arr.length : null; }
+function fmtN(n, dec) { return Number(n).toFixed(dec == null ? 0 : dec).replace('.', ','); }
+function fmtSigno(n, dec) { return (n > 0 ? '+' : (n < 0 ? '−' : '')) + fmtN(Math.abs(n), dec); }
+function fechaCorta(iso) { return iso.slice(8, 10) + '/' + iso.slice(5, 7); }
+const MESES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function fechaLarga(iso) { return parseInt(iso.slice(8, 10), 10) + ' de ' + MESES_LARGO[parseInt(iso.slice(5, 7), 10) - 1]; }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function cambioPct(actual, previo) { return previo > 0 ? Math.round(100 * (actual - previo) / previo) : null; }
+function mmss(seg) { seg = Math.round(seg); return Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0'); }
+function hmmss(seg) { seg = Math.round(seg); const h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60), s = seg % 60; return h ? h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') : m + ':' + String(s).padStart(2, '0'); }
+
+const DEPORTES_INFORME = [
+  { clave: 'carrera', icono: '🏃', nombre: 'Carrera', km: true },
+  { clave: 'bici', icono: '🚴', nombre: 'Bici', km: true },
+  { clave: 'kayak', icono: '🛶', nombre: 'Kayak', km: true },
+  { clave: 'natacion', icono: '🏊', nombre: 'Natación', km: false },
+  { clave: 'fuerza', icono: '🏋️', nombre: 'Fuerza', km: false },
+  { clave: 'caminata', icono: '🚶', nombre: 'Caminata', km: true },
+];
+function datosDeporte(clave) { return DEPORTES_INFORME.find((d) => d.clave === clave) || { clave, icono: '•', nombre: clave, km: false }; }
+
+/* ========================= INFORME: PERÍODOS ========================= */
+
+const informeEstado = { tipo: 'semana', offset: 0, cicloId: null, desdeLibre: '', hastaLibre: '' };
+
+function cicloDeReferencia(hoy) {
+  const lista = listaCiclosOrdenados();
+  if (!lista.length) return null;
+  const actual = lista.filter((c) => c.config.fechaInicio <= hoy && finCicloLocalISO(c.config) >= hoy)[0];
+  if (actual) return actual;
+  const pasados = lista.filter((c) => c.config.fechaInicio <= hoy);
+  return pasados.length ? pasados[pasados.length - 1] : lista[0];
+}
+function finCicloLocalISO(config) { return sumarDiasISO(config.fechaInicio, config.totalDias - 1); }
+
+// Devuelve { tipo, desde, hasta, titulo, sub, parcial, previo:{desde,hasta,txt}, error? }.
+function calcularPeriodoInforme(est) {
+  const hoy = hoyISO();
+  let desde, hasta, titulo, sub = '', error = null, tipoPrevio = 'igual';
+  if (est.tipo === 'semana') {
+    desde = sumarDiasISO(inicioSemanaISO(hoy), 7 * est.offset);
+    hasta = sumarDiasISO(desde, 6);
+    titulo = 'Semana del ' + fechaCorta(desde) + ' al ' + fechaCorta(hasta);
+    sub = 'domingo a sábado, igual que el calendario';
+    tipoPrevio = 'semana';
+  } else if (est.tipo === 'mes') {
+    let y = parseInt(hoy.slice(0, 4), 10), m = parseInt(hoy.slice(5, 7), 10) + est.offset;
+    while (m < 1) { m += 12; y--; }
+    while (m > 12) { m -= 12; y++; }
+    desde = y + '-' + String(m).padStart(2, '0') + '-01';
+    hasta = y + '-' + String(m).padStart(2, '0') + '-' + String(diasDelMes(y, m)).padStart(2, '0');
+    titulo = MESES_LARGO[m - 1].charAt(0).toUpperCase() + MESES_LARGO[m - 1].slice(1) + ' ' + y;
+    tipoPrevio = 'mes';
+  } else if (est.tipo === 'meso') {
+    const c = cicloDeReferencia(hoy);
+    if (!c) { error = 'Para ver un mesociclo necesitás un ciclo: creá uno en la pestaña Ciclo.'; }
+    else {
+      const largo = ((c.config.patronCargaSemanal && c.config.patronCargaSemanal.length) || 4) * 7;
+      const finC = finCicloLocalISO(c.config);
+      const refDia = hoy < c.config.fechaInicio ? c.config.fechaInicio : (hoy > finC ? finC : hoy);
+      const b0 = Math.floor(diasEntreISO(c.config.fechaInicio, refDia) / largo);
+      const maxB = Math.floor((c.config.totalDias - 1) / largo);
+      let b = Math.max(0, Math.min(maxB, b0 + est.offset));
+      est.offset = b - b0;                       // si se pasó del ciclo, queda pegado al borde
+      est.esUltimoMeso = b >= maxB || b >= b0;
+      desde = sumarDiasISO(c.config.fechaInicio, b * largo);
+      hasta = sumarDiasISO(desde, largo - 1);
+      if (hasta > finC) hasta = finC;
+      titulo = 'Mesociclo ' + (b + 1) + ' de «' + c.config.nombre + '»';
+      sub = 'bloque de ' + (largo / 7) + ' semanas del patrón de carga del ciclo';
+      est.maxOffsetMeso = maxB;
+    }
+  } else if (est.tipo === 'ciclo') {
+    const lista = listaCiclosOrdenados();
+    if (!lista.length) { error = 'Para ver un ciclo necesitás crear uno en la pestaña Ciclo.'; }
+    else {
+      const c = lista.filter((x) => x.id === est.cicloId)[0] || cicloDeReferencia(hoy);
+      est.cicloId = c.id;
+      const finC = finCicloLocalISO(c.config);
+      desde = c.config.fechaInicio;
+      const tope = (c.config.eventoFecha && c.config.eventoFecha < finC) ? c.config.eventoFecha : finC;
+      hasta = tope;
+      titulo = 'Ciclo «' + c.config.nombre + '»';
+      sub = c.config.eventoNombre && c.config.eventoFecha ? 'hasta el evento «' + c.config.eventoNombre + '» (' + fechaCorta(c.config.eventoFecha) + ')' : 'hasta el final del ciclo';
+    }
+  } else {
+    desde = est.desdeLibre || sumarDiasISO(hoy, -27);
+    hasta = est.hastaLibre || hoy;
+    if (desde > hasta) { error = 'La fecha de inicio es posterior a la de fin.'; }
+    titulo = 'Del ' + fechaCorta(desde) + ' al ' + fechaCorta(hasta);
+    sub = 'fechas a elección';
+  }
+  if (error) return { tipo: est.tipo, error };
+  let parcial = false;
+  if (hasta > hoy) { hasta = hoy; parcial = true; }
+  if (desde > hasta) return { tipo: est.tipo, error: 'Ese período todavía no empezó.' };
+  const n = diasEntreISO(desde, hasta) + 1;
+  let pDesde, pHasta;
+  if (tipoPrevio === 'semana') { pDesde = sumarDiasISO(desde, -7); pHasta = sumarDiasISO(pDesde, n - 1); }
+  else if (tipoPrevio === 'mes') {
+    let y = parseInt(desde.slice(0, 4), 10), m = parseInt(desde.slice(5, 7), 10) - 1;
+    if (m < 1) { m = 12; y--; }
+    pDesde = y + '-' + String(m).padStart(2, '0') + '-01';
+    pHasta = sumarDiasISO(pDesde, Math.min(n, diasDelMes(y, m)) - 1);
+  } else { pHasta = sumarDiasISO(desde, -1); pDesde = sumarDiasISO(pHasta, -(n - 1)); }
+  return {
+    tipo: est.tipo, desde, hasta, dias: n, titulo, sub, parcial,
+    previo: { desde: pDesde, hasta: pHasta, txt: fechaCorta(pDesde) + ' al ' + fechaCorta(pHasta) },
+  };
+}
+
+/* ========================= INFORME: DATOS ========================= */
+
+const REGISTRO_DEPORTES_DE_APPS = ['carrera', 'bici', 'kayak', 'fuerza'];
+
+// Reúne todo lo que lee el informe, una sola vez. Las sesiones vienen de las apps (leerSesionesCrudas) y se completan con las
+// que solo existen en el registro compartido de Forma: natación, Garmin importado y deportes sin app propia.
+function informeContexto() {
+  const vo = vo2Contexto();
+  const sesiones = vo.sesiones.filter((s) => !(s._x && s._x.noEntrenamiento));
+  const registro = leerRegistroForma();
+  const conocidas = {};
+  sesiones.forEach((s) => { conocidas[s.deporte + '|' + String(s.id)] = true; });
+  registro.forEach((r) => {
+    if (!r || !r.fecha || !r.deporte) return;
+    const id = String(r.id);
+    if (conocidas[r.deporte + '|' + id]) return;
+    const sinApp = REGISTRO_DEPORTES_DE_APPS.indexOf(r.deporte) === -1;
+    if (!sinApp && id.indexOf('garmin_') !== 0) return;       // lo demás puede ser un "fantasma" de una sesión ya borrada
+    sesiones.push({
+      deporte: r.deporte, fecha: String(r.fecha).slice(0, 10), horaInicio: null, duracionSeg: r.duracionSeg || 0, distanciaM: r.distanciaM || null,
+      ritmoSegKm: null, watts: null, pulso: null, tss: parseFloat(r.tss) || 0, id: r.id, pulsoMax: null, _x: { soloRegistro: true },
+    });
+  });
+  return Object.assign(vo, {
+    sesiones, registro, hoy: hoyISO(),
+    nutricion: leerNutricionResumen(), grasa: leerJsonLS('nutricion_historial_grasa', []),
+    manual: leerCumplimientoManual(), overridesSemana: leerOverridesSemana(),
+  });
+}
+function sesionesEnRango(ctx, desde, hasta) { return ctx.sesiones.filter((s) => s.fecha >= desde && s.fecha <= hasta); }
+
+/* ========================= INFORME: VOLUMEN ========================= */
+
+function resumenVolumen(ses) {
+  const por = {};
+  const dias = {};
+  let seg = 0, n = 0;
+  ses.forEach((s) => {
+    const p = por[s.deporte] || (por[s.deporte] = { seg: 0, m: 0, n: 0, tss: 0 });
+    p.seg += s.duracionSeg || 0; p.m += s.distanciaM || 0; p.n += 1; p.tss += s.tss || 0;
+    seg += s.duracionSeg || 0; n += 1; dias[s.fecha] = true;
+  });
+  const km = ['carrera', 'bici', 'kayak', 'caminata'].reduce((a, k) => a + (por[k] ? por[k].m : 0), 0) / 1000;
+  return { por, seg, n, km, dias: Object.keys(dias).length, diasSet: dias };
+}
+// Racha de días seguidos entrenando. `diasSet` es el conjunto de TODAS las fechas con sesión.
+function rachasDias(diasSet, desde, hasta, hoy) {
+  let max = 0, cur = 0;
+  rangoDiasISO(desde, hasta).forEach((d) => { if (diasSet[d]) { cur++; if (cur > max) max = cur; } else cur = 0; });
+  // racha vigente al cierre: si el cierre es hoy y hoy todavía no entrenó, cuenta desde ayer
+  let fin = hasta;
+  if (fin === hoy && !diasSet[fin]) fin = sumarDiasISO(fin, -1);
+  let vigente = 0;
+  for (let d = fin; diasSet[d]; d = sumarDiasISO(d, -1)) vigente++;
+  return { max, vigente };
+}
+
+/* ========================= INFORME: FORMA ========================= */
+
+// Misma recursión que calcularEstadoActual (EWMA 42/7, TSB = brecha del día anterior) pero con fechas ISO puras.
+function serieFormaISO(registro, hastaISO) {
+  const porDia = {};
+  registro.forEach((e) => {
+    const f = (e && e.fecha) ? String(e.fecha).slice(0, 10) : null;
+    if (!f) return;
+    porDia[f] = (porDia[f] || 0) + (parseFloat(e.tss) || 0);
+  });
+  const fechas = Object.keys(porDia).sort();
+  if (!fechas.length) return { serie: [], porDia, tieneDatos: false };
+  let inicio = fechas[0];
+  const minimo = sumarDiasISO(hastaISO, -400);
+  if (inicio < minimo) inicio = minimo;
+  let ctl = 0, atl = 0;
+  const serie = [];
+  for (let d = inicio; d <= hastaISO; d = sumarDiasISO(d, 1)) {
+    const tss = porDia[d] || 0, ctlPrev = ctl, atlPrev = atl;
+    ctl = ctl + (tss - ctl) / TC_CTL;
+    atl = atl + (tss - atl) / TC_ATL;
+    serie.push({ fecha: d, ctl, atl, tsb: ctlPrev - atlPrev, tss });
+  }
+  return { serie, porDia, tieneDatos: true };
+}
+function puntoSerie(serie, fechaISO) {
+  if (!serie.length) return null;
+  if (fechaISO < serie[0].fecha) return { fecha: fechaISO, ctl: 0, atl: 0, tsb: 0, tss: 0 };
+  const i = Math.min(serie.length - 1, diasEntreISO(serie[0].fecha, fechaISO));
+  return serie[i];
+}
+function bandaTsb(tsb) {
+  if (tsb < -30) return { txt: 'zona de riesgo de sobrecarga', color: 'var(--warn)' };
+  if (tsb < -10) return { txt: 'cargado: se está acumulando trabajo', color: 'var(--accent)' };
+  if (tsb < 5) return { txt: 'equilibrado, con algo de fatiga', color: 'var(--text-dim)' };
+  if (tsb <= 25) return { txt: 'fresco: buena forma para rendir', color: 'var(--ok)' };
+  return { txt: 'muy descansado: capaz perdiendo aptitud', color: 'var(--accent)' };
+}
+function calcularForma(ctx, per) {
+  const f = serieFormaISO(ctx.registro, per.hasta);
+  if (!f.tieneDatos) return null;
+  const ini = puntoSerie(f.serie, sumarDiasISO(per.desde, -1)), fin = puntoSerie(f.serie, per.hasta);
+  const dias = rangoDiasISO(per.desde, per.hasta);
+  const tssTotal = sumaArr(dias.map((d) => f.porDia[d] || 0));
+  const semanas = {};
+  dias.forEach((d) => { const k = inicioSemanaISO(d); semanas[k] = (semanas[k] || 0) + (f.porDia[d] || 0); });
+  const tssSemanas = Object.keys(semanas).sort().map((k) => ({ desde: k, tss: semanas[k] }));
+  const diasTsbBajo = dias.filter((d) => { const p = puntoSerie(f.serie, d); return p && p.tsb < -30; }).length;
+  const nSem = Math.max(1, per.dias / 7);
+  let ctlMax = 0;
+  f.serie.forEach((p) => { if (p.ctl > ctlMax) ctlMax = p.ctl; });
+  const pPrev = per.previo ? sumaArr(rangoDiasISO(per.previo.desde, per.previo.hasta).map((d) => f.porDia[d] || 0)) : null;
+  return {
+    serie: f.serie, porDia: f.porDia, ctlIni: ini.ctl, ctlFin: fin.ctl, atlFin: fin.atl, tsbFin: fin.tsb,
+    rampa: (fin.ctl - ini.ctl) / nSem, tssTotal, tssSemanas, tssPrevio: pPrev, diasTsbBajo, ctlMax, hayHistorialAntes: f.serie[0].fecha < per.desde,
+  };
+}
+function textoRampa(r) {
+  if (r > 8) return { txt: 'subida muy fuerte (más de 8 por semana): riesgo de pasarse', color: 'var(--warn)' };
+  if (r >= 3) return { txt: 'subida sostenible: la aptitud crece sin pasarse', color: 'var(--ok)' };
+  if (r > -1) return { txt: 'aptitud estable', color: 'var(--text-dim)' };
+  return { txt: 'la aptitud bajó: menos carga que en las semanas anteriores', color: 'var(--accent)' };
+}
+
+/* ========================= INFORME: DETALLE DE CORRER (IndexedDB, opcional) ========================= */
+// Correr guarda las muestras por segundo en su propia base (correr_almacen) y en localStorage solo un resumen. Para el mejor 5 km
+// real y el tiempo en zonas hace falta leerlas. Es solo lectura, opcional y asíncrono: si no se puede, el informe usa el
+// resumen de cada sesión y lo aclara.
+
+const CORRER_DISTANCIAS_RECORD = [[1000, '1 km'], [5000, '5 km'], [10000, '10 km'], [21097.5, 'Media maratón']];
+const CORRER_VEL_MAX_MS = 25 / 3.6;      // descarta saltos de GPS imposibles
+let correrDetalle = { estado: 'sin-cargar', porId: {} };
+
+function puntosCorrerDesdeCompacto(c) {
+  if (Array.isArray(c)) return c.filter((p) => p && p.t != null && p.distAcum != null).map((p) => ({ t: p.t, d: p.distAcum, pulso: p.pulso || 0 }));   // formato viejo: lista de puntos
+  if (!c || !c.t || !c.distAcum) return [];
+  const out = [];
+  for (let i = 0; i < c.t.length; i++) out.push({ t: c.t[i], d: c.distAcum[i], pulso: c.pulso ? (c.pulso[i] || 0) : 0 });
+  return out;
+}
+async function leerCorrerDesdeIDB() {
+  if (!window.indexedDB || typeof indexedDB.databases !== 'function') return { estado: 'no-soportado' };
+  const dbs = await indexedDB.databases();
+  if (!dbs.some((d) => d.name === 'correr_almacen')) return { estado: 'sin-base' };   // sin esto, abrirla la CREARÍA vacía
+  const db = await new Promise((res, rej) => {
+    const r = indexedDB.open('correr_almacen');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error || new Error('no se pudo abrir')); r.onblocked = () => rej(new Error('base bloqueada'));
+  });
+  try {
+    if (!db.objectStoreNames.contains('datos')) return { estado: 'sin-base' };
+    const texto = await new Promise((res, rej) => {
+      const rq = db.transaction('datos', 'readonly').objectStore('datos').get('correr_sesiones');
+      rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+    });
+    if (!texto) return { estado: 'sin-base' };
+    const lista = typeof texto === 'string' ? JSON.parse(texto) : texto;
+    return { estado: 'ok', lista: Array.isArray(lista) ? lista : [] };
+  } finally { db.close(); }
+}
+function cortesIntensidad(deporte) { return deporte === 'bici' ? { baja: 0.75, alta: 1.05 } : { baja: 0.90, alta: 1.00 }; }
+function claseIntensidad(razon, deporte) {
+  const c = cortesIntensidad(deporte);
+  return razon < c.baja ? 'baja' : (razon <= c.alta ? 'media' : 'alta');
+}
+function analizarSesionCorrer(s, umbralPulsoActual) {
+  const pts = puntosCorrerDesdeCompacto(s.puntos).sort((a, b) => a.t - b.t);
+  const r = { picos: {}, zonas: null };
+  if (pts.length > 5) {
+    CORRER_DISTANCIAS_RECORD.forEach(([D]) => { if ((s.distanciaM || 0) >= D) { const t = mejorTiempoDistancia(pts, D, CORRER_VEL_MAX_MS); if (t) r.picos[D] = t; } });
+    const umbral = s.umbralPulso || umbralPulsoActual;
+    if (umbral > 0) {
+      const z = { baja: 0, media: 0, alta: 0 };
+      let total = 0;
+      for (let i = 0; i < pts.length; i++) {
+        if (!(pts[i].pulso > 0)) continue;
+        const hueco = i + 1 < pts.length ? pts[i + 1].t - pts[i].t : 1;
+        const dt = hueco > 0 && hueco <= 10 ? hueco : 1;
+        z[claseIntensidad(pts[i].pulso / umbral, 'carrera')] += dt; total += dt;
+      }
+      if (total > 0) r.zonas = z;
+    }
+  }
+  return r;
+}
+let correrDetalleCargando = null;
+function cargarCorrerDetalle(alTerminar) {
+  if (correrDetalle.estado !== 'sin-cargar' || correrDetalleCargando) return;
+  correrDetalleCargando = (async () => {
+    try {
+      const lec = await leerCorrerDesdeIDB();
+      if (lec.estado !== 'ok') {
+        correrDetalle = { estado: lec.estado, porId: {} };
+      } else {
+        const umbralActual = (leerUmbrales().pulsoUmbralCarrera) || 0;
+        const porId = {};
+        lec.lista.forEach((s) => { if (s && s.id && s.puntos) { try { porId[s.id] = analizarSesionCorrer(s, umbralActual); } catch (e) { /* una sesión rota no tira el resto */ } } });
+        correrDetalle = { estado: 'ok', porId };
+      }
+    } catch (e) {
+      correrDetalle = { estado: 'error', porId: {}, mensaje: e && e.message };
+    }
+    correrDetalleCargando = null;
+    if (alTerminar) alTerminar();
+  })();
+}
+
+/* ========================= INFORME: MEJORAS (récords, umbrales, VO2 máx, eficiencia) ========================= */
+
+// Cada métrica: lista de { fecha, valor } de todas las sesiones; "menor es mejor" para tiempos.
+function metricasRecord(ctx) {
+  const M = [];
+  const nueva = (deporte, etiqueta, menorMejor, fmt, extraFmt) => { const m = { deporte, etiqueta, menorMejor, fmt, extraFmt, datos: [], aprox: false }; M.push(m); return m; };
+  const kg = (fecha) => pesoEn(ctx.perfil, ctx.pesos, fecha);
+  // Bici: potencias pico guardadas en cada sesión
+  [['p60', 'Mejor 1 min de potencia'], ['p300', 'Mejor 5 min de potencia'], ['p1200', "Mejor 20 min de potencia"]].forEach(([k, et]) => {
+    const m = nueva('bici', et, false, (v) => Math.round(v) + ' W', (v, f) => { const p = kg(f); return p ? fmtN(v / p, 2) + ' W/kg' : ''; });
+    ctx.sesiones.forEach((s) => {
+      if (s.deporte !== 'bici' || !s._x) return;
+      let v = s._x.peaks && s._x.peaks[k] > 0 ? s._x.peaks[k] : null;
+      if (v == null && k === 'p1200' && s._x.best20Power > 0) v = s._x.best20Power;
+      if (v != null) m.datos.push({ fecha: s.fecha, valor: v });
+    });
+  });
+  // Kayak: mejor 1000 m (tiempo) y mejor 5 min (distancia), de las muestras por segundo
+  const k1000 = nueva('kayak', 'Mejor 1000 m', true, (v) => mmss(v), (v) => fmtN(1000 / v * 3.6, 1) + ' km/h');
+  const k5 = nueva('kayak', 'Mejor 5 min (distancia)', false, (v) => Math.round(v) + ' m', (v) => fmtN(v / 300 * 3.6, 1) + ' km/h');
+  ctx.sesiones.forEach((s) => {
+    if (s.deporte !== 'kayak' || !s._puntos) return;
+    if (s._k1000 === undefined) { const pts = ptsKayak(s); s._k1000 = pts && (s.distanciaM || 0) >= 1000 ? mejorTiempoDistancia(pts, 1000, null) : null; }
+    if (s._k1000) k1000.datos.push({ fecha: s.fecha, valor: s._k1000 });
+    const r = kayakVentanaSesion(s, 300);
+    if (r && r.seg >= 298) k5.datos.push({ fecha: s.fecha, valor: r.dist });
+  });
+  // Carrera: mejores tiempos por distancia (con las muestras de Correr si se pudieron leer; si no, aproximado con la sesión entera)
+  CORRER_DISTANCIAS_RECORD.forEach(([D, et]) => {
+    const m = nueva('carrera', 'Mejor ' + et, true, (v) => hmmss(v), (v) => segARelojes(Math.round(v / (D / 1000))) + '/km');
+    ctx.sesiones.forEach((s) => {
+      if (s.deporte !== 'carrera') return;
+      const det = correrDetalle.estado === 'ok' && s.id != null ? correrDetalle.porId[s.id] : null;
+      if (det) { if (det.picos[D]) m.datos.push({ fecha: s.fecha, valor: det.picos[D] }); return; }
+      // sin muestras: solo sirve una sesión casi de esa distancia (hasta 12% más), con el ritmo medio de toda la sesión
+      if (s.distanciaM >= D && s.distanciaM <= D * 1.12 && s.duracionSeg > 0) { m.datos.push({ fecha: s.fecha, valor: s.duracionSeg * D / s.distanciaM, aprox: true }); m.aprox = true; }
+    });
+  });
+  // Sesión más larga por deporte
+  ['carrera', 'bici', 'kayak'].forEach((d) => {
+    const m = nueva(d, 'Salida más larga', false, (v) => fmtN(v / 1000, 1) + ' km', (v, f, extra) => extra ? formatoTiempoTotal(extra) : '');
+    ctx.sesiones.forEach((s) => { if (s.deporte === d && s.distanciaM > 0 && !(s._x && s._x.soloRegistro)) m.datos.push({ fecha: s.fecha, valor: s.distanciaM, extra: s.duracionSeg }); });
+  });
+  return M;
+}
+function calcularRecords(ctx, per) {
+  const out = [];
+  metricasRecord(ctx).forEach((m) => {
+    const enP = m.datos.filter((d) => d.fecha >= per.desde && d.fecha <= per.hasta);
+    if (!enP.length) return;
+    const mejor = (arr) => arr.reduce((a, b) => (a == null || (m.menorMejor ? b.valor < a.valor : b.valor > a.valor) ? b : a), null);
+    const bP = mejor(enP), antes = m.datos.filter((d) => d.fecha < per.desde), bA = mejor(antes);
+    const esRecord = !bA || (m.menorMejor ? bP.valor < bA.valor : bP.valor > bA.valor);
+    let mejoraTxt = '';
+    if (bA && esRecord) {
+      const dif = m.menorMejor ? bA.valor - bP.valor : bP.valor - bA.valor;
+      mejoraTxt = (m.menorMejor ? '−' : '+') + (m.fmt === undefined ? '' : (m.menorMejor ? mmss(dif) : (m.fmt(dif).indexOf(' W') > 0 ? Math.round(dif) + ' W' : m.fmt(dif)))) + ' sobre tu marca anterior (' + m.fmt(bA.valor) + ')';
+    }
+    const cercaPct = (bA && !esRecord) ? Math.round(100 * (m.menorMejor ? bA.valor / bP.valor : bP.valor / bA.valor)) : null;
+    out.push({
+      deporte: m.deporte, etiqueta: m.etiqueta, valorTxt: m.fmt(bP.valor), extraTxt: m.extraFmt ? m.extraFmt(bP.valor, bP.fecha, bP.extra) : '', fecha: bP.fecha,
+      esRecord, primera: !bA, mejoraTxt, cercaPct, anteriorTxt: bA ? m.fmt(bA.valor) : null, aprox: !!bP.aprox, valor: bP.valor, menorMejor: m.menorMejor,
+    });
+  });
+  return out;
+}
+
+// Cambios entre el inicio y el cierre del período: umbrales/FTP/VMA (con las mismas fuentes que la estimación de VO2 máx) y VO2 máx.
+function calcularCambiosUmbrales(ctx, per) {
+  const antes = sumarDiasISO(per.desde, -1);
+  const cambios = [];
+  const u = ctx.umbrales;
+  const h = (campo, f) => { const r = umbralHistoricoEn(u, campo, f); return r ? r.valor : null; };
+  const ftp0 = h('ftpBici', antes), ftp1 = h('ftpBici', per.hasta);
+  if (ftp1 != null) cambios.push({ icono: '🚴', etiqueta: 'FTP', ini: ftp0, fin: ftp1, fmt: (v) => Math.round(v) + ' W', mejorSiSube: true });
+  const r0 = h('ritmoUmbralCarreraSegKm', antes), r1 = h('ritmoUmbralCarreraSegKm', per.hasta);
+  if (r1 != null) cambios.push({ icono: '🏃', etiqueta: 'Ritmo umbral', ini: r0, fin: r1, fmt: (v) => segARelojes(Math.round(v)) + '/km', mejorSiSube: false });
+  [['pulsoUmbralCarrera', '🏃', 'Pulso umbral carrera'], ['pulsoUmbralBici', '🚴', 'Pulso umbral bici'], ['pulsoUmbralKayak', '🛶', 'Pulso umbral kayak']].forEach(([campo, ic, et]) => {
+    const a = h(campo, antes), b = h(campo, per.hasta);
+    if (b != null && a != null && Math.round(a) !== Math.round(b)) cambios.push({ icono: ic, etiqueta: et, ini: a, fin: b, fmt: (v) => Math.round(v) + ' lpm', neutro: true });
+  });
+  const tests = vmaTests(ctx);
+  const t1 = tests.filter((t) => t.fecha <= per.hasta).pop(), t0 = tests.filter((t) => t.fecha <= antes).pop();
+  if (t1 && t1.fecha >= per.desde) cambios.push({ icono: '🏃', etiqueta: 'VMA (test del ' + fechaCorta(t1.fecha) + ')', ini: t0 ? t0.vma : null, fin: t1.vma, fmt: (v) => fmtN(v, 1) + ' km/h', mejorSiSube: true });
+  return cambios;
+}
+function calcularCambiosVo2(ctx, per) {
+  const antes = vo2Estimaciones(ctx, sumarDiasISO(per.desde, -1)), ahora = vo2Estimaciones(ctx, per.hasta);
+  const out = [];
+  VO2_FILAS.forEach((f) => {
+    const b = ahora[f.clave];
+    if (!b || b.valor == null) return;
+    const a = antes[f.clave] && antes[f.clave].valor != null ? antes[f.clave] : null;
+    out.push({ icono: f.icono, etiqueta: f.nombre, ini: a ? a.valor : null, fin: b.valor, metodo: b.metodoTxt });
+  });
+  return out;
+}
+// Eficiencia aeróbica (potencia o velocidad por latido) en sesiones continuas de ≥ 30 min por debajo del umbral. Solo comparable
+// entre sesiones parecidas: el calor, el cansancio y la hidratación también la mueven.
+function eficienciaSesion(s) {
+  if (!(s.duracionSeg >= 1800) || !(s.pulso > 0) || (s._x && s._x.soloRegistro)) return null;
+  const h = s.duracionSeg / 3600, IF = s.tss > 0 ? Math.sqrt(s.tss / (h * 100)) : null;
+  if (IF != null && IF >= 0.9) return null;
+  if (s.deporte === 'bici' && s.watts > 0) return s.watts / s.pulso;
+  if (s.deporte === 'carrera' && s.efAerobica > 0) return s.efAerobica;
+  return null;
+}
+function calcularEficiencia(ctx, per) {
+  const out = [];
+  [['bici', '🚴 Bici', 'W por latido', 2], ['carrera', '🏃 Carrera', 'm/min por latido', 2]].forEach(([dep, et, un, dec]) => {
+    const vals = (desde, hasta) => ctx.sesiones.filter((s) => s.deporte === dep && s.fecha >= desde && s.fecha <= hasta).map(eficienciaSesion).filter((v) => v != null);
+    const a = vals(per.desde, per.hasta), b = per.previo ? vals(per.previo.desde, per.previo.hasta) : [];
+    if (!a.length) return;
+    out.push({ etiqueta: et, unidad: un, dec, actual: promedioArr(a), nActual: a.length, previo: b.length ? promedioArr(b) : null, nPrevio: b.length });
+  });
+  return out;
+}
+
+/* ========================= INFORME: DISTRIBUCIÓN DE INTENSIDAD ========================= */
+// Tres zonas (modelo polarizado): baja (< 90% del umbral de pulso o < 76% del FTP), media y alta (> 100% del pulso umbral o > 105% del FTP).
+// El 80/20 apunta a ~80% del tiempo en baja y ~20% en alta, con poca zona media ("zona gris"). Los cortes son una convención.
+
+function claseDeSesionPorMedia(s, ctx) {
+  const h = (s.duracionSeg || 0) / 3600;
+  if (!(h > 0) || !(s.tss > 0)) return null;
+  const IF = Math.sqrt(s.tss / (h * 100));
+  return claseIntensidad(IF, s.deporte);
+}
+function distribucionSesion(s, ctx) {
+  if (s.deporte === 'fuerza' || s.deporte === 'natacion' || !(s.duracionSeg > 0)) return null;
+  const z = { baja: 0, media: 0, alta: 0 };
+  if (s.deporte === 'bici' && s._x && s._x.zonesP && s._x.zonesP.rows && s._x.zonesP.ftp > 0) {
+    let tot = 0;
+    // cada zona se clasifica por su límite inferior: Z1–Z2 (hasta 75% del FTP) baja · Z3–Z4 media · Z5 en adelante (desde 105%) alta
+    s._x.zonesP.rows.forEach((r) => { const q = (r.lo || 0) / s._x.zonesP.ftp; z[q < 0.745 ? 'baja' : (q < 1.045 ? 'media' : 'alta')] += r.sec || 0; tot += r.sec || 0; });
+    if (tot > 0) return { z, exacto: true };
+  }
+  if (s.deporte === 'kayak' && s._puntos) {
+    const um = ctx.umbrales.pulsoUmbralKayak || (ctx.kayakUmbral || 0);
+    if (um > 0) {
+      let tot = 0;
+      s._puntos.forEach((p, i) => {
+        if (!(p.pulso > 0)) return;
+        const sig = s._puntos[i + 1], hueco = sig ? sig.t - p.t : 1, dt = hueco > 0 && hueco <= 10 ? hueco : 1;
+        z[claseIntensidad(p.pulso / um, 'kayak')] += dt; tot += dt;
+      });
+      if (tot > 0) return { z, exacto: true };
+    }
+  }
+  if (s.deporte === 'carrera' && correrDetalle.estado === 'ok' && s.id != null && correrDetalle.porId[s.id] && correrDetalle.porId[s.id].zonas) {
+    return { z: Object.assign({}, correrDetalle.porId[s.id].zonas), exacto: true };
+  }
+  const c = claseDeSesionPorMedia(s, ctx);
+  if (!c) return null;
+  z[c] = s.duracionSeg;
+  return { z, exacto: false };
+}
+function calcularIntensidad(ctx, per) {
+  const tot = { baja: 0, media: 0, alta: 0 };
+  let exacto = 0, aprox = 0, sinDato = 0;
+  ctx.kayakUmbral = (leerJsonLS('kayak_umbral_pulso', null) || {}).valor || 0;
+  sesionesEnRango(ctx, per.desde, per.hasta).forEach((s) => {
+    if (s.deporte === 'fuerza' || s.deporte === 'natacion') return;
+    const d = distribucionSesion(s, ctx);
+    if (!d) { if (s.duracionSeg > 0) sinDato += s.duracionSeg; return; }
+    ['baja', 'media', 'alta'].forEach((k) => { tot[k] += d.z[k]; });
+    const t = d.z.baja + d.z.media + d.z.alta;
+    if (d.exacto) exacto += t; else aprox += t;
+  });
+  const total = tot.baja + tot.media + tot.alta;
+  if (!(total > 0)) return { total: 0, sinDato };
+  const p = { baja: tot.baja / total, media: tot.media / total, alta: tot.alta / total };
+  let veredicto;
+  if (total < 7200) veredicto = { nivel: 'poco', txt: 'Hay pocas horas para juzgar la distribución: con más de 2 h de entrenamiento aeróbico se vuelve confiable.' };
+  else if (p.baja > 0.90) veredicto = { nivel: 'facil', txt: 'Casi todo fue suave (' + Math.round(p.baja * 100) + '%): bien para la base, pero falta algo de calidad. Una sesión de intensidad por semana completa el 80/20.' };
+  else if (p.baja >= 0.75 && p.media <= 0.15) veredicto = { nivel: 'ok', txt: 'Quedaste cerca del 80/20: ' + Math.round(p.baja * 100) + '% suave, ' + Math.round(p.alta * 100) + '% fuerte y poca zona gris.' };
+  else if (p.media > 0.20) veredicto = { nivel: 'gris', txt: 'Mucho tiempo en zona media (' + Math.round(p.media * 100) + '%): ni suave para recuperar ni fuerte para progresar. Probá hacer más fáciles los días fáciles.' };
+  else if (p.baja < 0.70) veredicto = { nivel: 'intenso', txt: 'Fue un período intenso: solo ' + Math.round(p.baja * 100) + '% suave. Sumá volumen fácil para sostenerlo sin acumular fatiga.' };
+  else veredicto = { nivel: 'cerca', txt: 'Bastante cerca del 80/20 (' + Math.round(p.baja * 100) + '% suave, ' + Math.round(p.alta * 100) + '% fuerte).' };
+  return { total, seg: tot, p, exacto, aprox, sinDato, veredicto };
+}
+
+/* ========================= INFORME: CUMPLIMIENTO DEL PLAN (el semáforo) ========================= */
+
+// Bloques planificados de la semana que arranca el domingo `domingoISO` (misma lógica que el calendario: horarios del ciclo + ajustes de esa semana).
+function bloquesPlaneadosSemana(ctx, domingoISO) {
+  const out = [];
+  for (let dia = 0; dia < 7; dia++) {
+    const iso = sumarDiasISO(domingoISO, dia);
+    const enc = cicloParaFecha(iso);
+    if (!enc) continue;
+    const cfg = enc.config;
+    const r = calcularDia(Object.assign({}, cfg, { cargaOverrides: overridesAll[enc.id] || {} }), iso);
+    if (r.fueraDeRango) continue;
+    DISCIPLINAS.forEach((d) => {
+      (cfg.disciplinas[d.key].horario || []).filter((h) => h.dia === dia).forEach((entrada) => {
+        const ov = ctx.overridesSemana[enc.id] && ctx.overridesSemana[enc.id][domingoISO] ? ctx.overridesSemana[enc.id][domingoISO][d.key + '#' + dia] : null;
+        const diaActual = ov ? ov.dia : dia;
+        out.push({ disc: d.key, label: d.label, fecha: sumarDiasISO(domingoISO, diaActual), planSeg: r.disciplinas[d.key].tiempoSesionSeg, cicloId: enc.id });
+      });
+    });
+  }
+  return out;
+}
+function realSegDia(ctx, fecha, disc) {
+  if (disc === 'natacion') {
+    const man = ctx.manual[fecha] && ctx.manual[fecha].natacion;
+    if (man) return man.hecho ? (man.duracionSeg || -1) : 0;
+    const ses = ctx.sesiones.filter((s) => s.fecha === fecha && s.deporte === 'natacion');
+    return ses.length ? (sumaArr(ses.map((s) => s.duracionSeg || 0)) || -1) : null;       // -1 = hecho, sin duración conocida
+  }
+  return sumaArr(ctx.sesiones.filter((s) => s.fecha === fecha && s.deporte === disc).map((s) => s.duracionSeg || 0));
+}
+function ratioBloque(ctx, b) {
+  if (!(b.planSeg > 0)) return null;
+  const real = realSegDia(ctx, b.fecha, b.disc);
+  if (real === null) return b.disc === 'natacion' ? null : 0;
+  if (real === -1) return 1;
+  return real / b.planSeg;
+}
+function calcularCumplimiento(ctx, per) {
+  const hoy = ctx.hoy;
+  const bloques = [];
+  for (let dom = inicioSemanaISO(per.desde); dom <= per.hasta; dom = sumarDiasISO(dom, 7)) {
+    bloquesPlaneadosSemana(ctx, dom).forEach((b) => { if (b.fecha >= per.desde && b.fecha <= per.hasta && b.fecha <= hoy) bloques.push(b); });
+  }
+  const evaluados = [];
+  bloques.forEach((b) => { const r = ratioBloque(ctx, b); if (r != null) evaluados.push(Object.assign({ ratio: r }, b)); });
+  if (!evaluados.length) return { hayPlan: bloques.length > 0 || haySoloPlanFuturo(per), planeadas: 0 };
+  evaluados.sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
+  const hechas = evaluados.filter((b) => b.ratio >= 0.75).length, parciales = evaluados.filter((b) => b.ratio >= 0.25 && b.ratio < 0.75).length, faltaron = evaluados.filter((b) => b.ratio < 0.25).length;
+  const porDisc = {};
+  evaluados.forEach((b) => { const p = porDisc[b.disc] || (porDisc[b.disc] = { label: b.label, plan: 0, real: 0, n: 0, hechas: 0 }); p.n++; if (b.ratio >= 0.75) p.hechas++; p.plan += b.planSeg; });
+  Object.keys(porDisc).forEach((k) => { porDisc[k].real = sumaArr(sesionesEnRango(ctx, per.desde, per.hasta).filter((s) => s.deporte === k).map((s) => s.duracionSeg || 0)); });
+  return {
+    hayPlan: true, planeadas: evaluados.length, hechas, parciales, faltaron, pct: Math.round(100 * hechas / evaluados.length),
+    planSeg: sumaArr(evaluados.map((b) => b.planSeg)), porDisc, bloques: evaluados,
+  };
+}
+function haySoloPlanFuturo(per) { return !!cicloParaFecha(per.desde) || !!cicloParaFecha(per.hasta); }
+// Semanas completas seguidas sin faltar (ninguna sesión planificada con menos del 25% hecho), contadas hacia atrás desde la última semana cerrada.
+function semanasSinFaltar(ctx, hastaISO) {
+  const ciclos = listaCiclosOrdenados();
+  if (!ciclos.length) return 0;
+  let dom = inicioSemanaISO(hastaISO);
+  if (sumarDiasISO(dom, 6) > hastaISO) dom = sumarDiasISO(dom, -7);      // la semana en curso todavía no cuenta
+  const primero = inicioSemanaISO(ciclos[0].config.fechaInicio);
+  let n = 0;
+  for (; dom >= primero && n < 60; dom = sumarDiasISO(dom, -7)) {
+    const bl = bloquesPlaneadosSemana(ctx, dom).filter((b) => b.planSeg > 0 && b.fecha <= ctx.hoy);
+    if (!bl.length) { if (n === 0) continue; break; }
+    const ratios = bl.map((b) => ratioBloque(ctx, b)).filter((r) => r != null);
+    if (!ratios.length || ratios.some((r) => r < 0.25)) break;
+    n++;
+  }
+  return n;
+}
+
+/* ========================= INFORME: RECUPERACIÓN, NUTRICIÓN, LO QUE VIENE ========================= */
+
+function calcularRecuperacion2(ctx, per, forma) {
+  const enP = (d, h) => ctx.hrv.filter((r) => r && r.fecha >= d && r.fecha <= h && r.rmssdMs != null);
+  const a = enP(per.desde, per.hasta), b = per.previo ? enP(per.previo.desde, per.previo.hasta) : [];
+  const todos = ctx.hrv.filter((r) => r && r.fecha && r.fecha <= per.hasta && r.rmssdMs != null).sort((x, y) => (x.fecha < y.fecha ? -1 : 1));
+  const estado = calcularEstadoHrv(todos);
+  const rep = (arr) => { const v = arr.map((r) => r.pulsoPromedio).filter((x) => x > 30 && x < 110); return v.length ? promedioArr(v) : null; };
+  return {
+    nHrv: a.length, rmssd: a.length ? promedioArr(a.map((r) => r.rmssdMs)) : null, rmssdPrevio: b.length ? promedioArr(b.map((r) => r.rmssdMs)) : null,
+    estado, pulsoReposo: rep(a), pulsoReposoPrevio: rep(b), diasTsbBajo: forma ? forma.diasTsbBajo : null, hayForma: !!forma,
+  };
+}
+function historialGrasa(ctx) {
+  return (ctx.grasa || []).filter((g) => g && g.fecha && g.grasaPct > 0).sort((x, y) => (x.fecha < y.fecha ? -1 : 1));
+}
+function calcularNutricion(ctx, per) {
+  const dias = rangoDiasISO(per.desde, per.hasta);
+  const reg = [];
+  dias.forEach((d) => {
+    const n = nutricionDia(d);
+    if (n && n.consumido > 0) reg.push(Object.assign({ fecha: d }, n));
+  });
+  const grasa = historialGrasa(ctx).filter((g) => g.fecha <= per.hasta);
+  const pesos = ctx.pesos.filter((p) => p.fecha <= per.hasta);
+  const pesoFin = pesos.length ? pesos[pesos.length - 1] : null;
+  const pesoIni = ctx.pesos.filter((p) => p.fecha < per.desde).pop() || ctx.pesos.filter((p) => p.fecha >= per.desde && p.fecha <= per.hasta)[0] || null;
+  const grasaFin = grasa.length ? grasa[grasa.length - 1] : null;
+  const grasaIni = grasa.filter((g) => g.fecha < per.desde).pop() || grasa.filter((g) => g.fecha >= per.desde)[0] || null;
+  if (!reg.length && !(pesoFin && pesoFin.fecha >= per.desde) && !(grasaFin && grasaFin.fecha >= per.desde)) return null;
+  const conGasto = reg.filter((r) => r.gastoTotal > 0);
+  const conProt = reg.filter((r) => r.proteinasG > 0);
+  const protG = conProt.length ? promedioArr(conProt.map((r) => r.proteinasG)) : null;
+  const pKg = pesoFin ? pesoFin.pesoKg : (ctx.perfil.pesoKg > 0 ? +ctx.perfil.pesoKg : null);
+  return {
+    diasConDatos: reg.length, diasTotales: dias.length,
+    consumido: reg.length ? promedioArr(reg.map((r) => r.consumido)) : null,
+    gasto: conGasto.length ? promedioArr(conGasto.map((r) => r.gastoTotal)) : null,
+    balance: conGasto.length ? promedioArr(conGasto.map((r) => r.consumido - r.gastoTotal)) : null,
+    protG, protGkg: protG != null && pKg ? protG / pKg : null, pesoKg: pKg,
+    pesoIni: pesoIni ? pesoIni.pesoKg : null, pesoFin: pesoFin ? pesoFin.pesoKg : null, pesoFinFecha: pesoFin ? pesoFin.fecha : null,
+    grasaIni: grasaIni ? grasaIni.grasaPct : null, grasaFin: grasaFin && grasaFin.fecha >= per.desde ? grasaFin.grasaPct : null,
+  };
+}
+
+function proximoEventoInforme(ctx) {
+  const c = listaCiclosOrdenados().filter((x) => x.config.eventoNombre && x.config.eventoFecha && x.config.eventoFecha >= ctx.hoy)
+    .sort((a, b) => (a.config.eventoFecha < b.config.eventoFecha ? -1 : 1))[0];
+  return c || null;
+}
+function calcularProximo(ctx, forma, cumpl, inten, rec) {
+  const hoy = ctx.hoy;
+  const ev = proximoEventoInforme(ctx);
+  const f = serieFormaISO(ctx.registro, hoy);
+  const ahora = f.tieneDatos ? puntoSerie(f.serie, hoy) : null;
+  let proy = [];
+  if (ahora && listaCiclosOrdenados().length) { try { proy = proyectarFormaTemporada(hoy, ahora.ctl, ahora.atl); } catch (e) { proy = []; } }
+  // Punto proyectado de esa fecha; si el evento cae unos días después del último día proyectado se usa el último (hasta 7 días de margen)
+  const enFecha = (iso) => {
+    if (iso === hoy) return ahora;
+    const exacto = proy.filter((p) => p.fecha === iso)[0];
+    if (exacto) return exacto;
+    const ult = proy[proy.length - 1];
+    return ult && ult.fecha < iso && diasEntreISO(ult.fecha, iso) <= 7 ? ult : null;
+  };
+  const out = { evento: null, ahora, recomendacion: null, proyeccion30: null };
+  const p30 = enFecha(sumarDiasISO(hoy, 28)) || (proy.length ? proy[proy.length - 1] : null);
+  if (p30) out.proyeccion30 = { fecha: p30.fecha, ctl: p30.ctl, tsb: p30.tsb };
+  if (ev) {
+    const dias = diasEntreISO(hoy, ev.config.eventoFecha);
+    const pe = enFecha(ev.config.eventoFecha);
+    out.evento = { nombre: ev.config.eventoNombre, fecha: ev.config.eventoFecha, dias, semanas: Math.floor(dias / 7), ctl: pe ? pe.ctl : null, tsb: pe ? pe.tsb : null, taperDias: (ev.config.taper && ev.config.taper.dias) || 0, taperPct: (ev.config.taper && ev.config.taper.reduccionPct) || 0 };
+  }
+  // próxima semana planificada (para anclar la recomendación en el plan)
+  let planSemana = null;
+  const enc = cicloParaFecha(sumarDiasISO(hoy, 1));
+  if (enc) { const r = calcularDia(Object.assign({}, enc.config, { cargaOverrides: overridesAll[enc.id] || {} }), sumarDiasISO(hoy, 1)); if (!r.fueraDeRango) planSemana = { horas: r.horasSemana, carga: r.pctCarga, enTaper: r.enTaper }; }
+  out.planSemana = planSemana;
+  out.recomendacion = recomendacionConcreta({ ev: out.evento, ahora, forma, cumpl, inten, rec, planSemana });
+  return out;
+}
+// Una recomendación concreta, la primera regla que aplique (de lo más urgente a lo más fino).
+function recomendacionConcreta(c) {
+  const tsb = c.ahora ? c.ahora.tsb : null, ev = c.ev;
+  if (c.rec && c.rec.estado && c.rec.estado.estado === 'Bajo') return { icono: '🛑', txt: 'Tu HRV está en estado Bajo: esta semana bajá el volumen un 30% y dejá solo trabajo suave hasta que se recupere. Ese descanso es lo que te deja rendir después.' };
+  if (tsb != null && tsb < -30) return { icono: '🛑', txt: 'Tu TSB es ' + fmtSigno(tsb, 0) + ' (zona de riesgo): metele una semana de descarga, con un 30–40% menos de volumen y sin series fuertes, hasta volver a más de −15.' };
+  if (ev && ev.taperDias > 0 && ev.dias >= 0 && ev.dias <= ev.taperDias) return { icono: '🎯', txt: 'Estás en la afinación (faltan ' + ev.dias + ' días para «' + ev.nombre + '»): recortá volumen' + (ev.taperPct ? ' como marca el plan (−' + ev.taperPct + '%)' : '') + ', mantené 1–2 sesiones cortas con ritmo de competencia y priorizá dormir.' };
+  if (c.forma && c.forma.rampa > 8) return { icono: '⚠️', txt: 'Tu CTL subió ' + fmtN(c.forma.rampa, 1) + ' por semana, más de lo sostenible (8): la próxima semana no subas la carga, repetí la anterior para asimilar.' };
+  if (ev && ev.tsb != null && ev.dias <= 28 && ev.dias > ev.taperDias) {
+    if (ev.tsb < -5) return { icono: '🎯', txt: 'Al ritmo del plan llegás a «' + ev.nombre + '» con TSB ' + fmtSigno(ev.tsb, 0) + ' (todavía cargado). Asegurá que la afinación se cumpla entera: es lo que te lleva a +5 / +25.' };
+    if (ev.tsb > 25) return { icono: '🎯', txt: 'Al ritmo del plan llegás a «' + ev.nombre + '» con TSB ' + fmtSigno(ev.tsb, 0) + ' (muy descansado). Podés sumar una sesión de calidad en las próximas semanas sin comprometer la forma.' };
+  }
+  if (c.cumpl && c.cumpl.planeadas >= 3 && c.cumpl.pct < 70) return { icono: '📌', txt: 'Cumpliste ' + c.cumpl.pct + '% de las sesiones del plan: si no entran todas, protegé la sesión larga y la de calidad de cada semana y acortá las demás.' };
+  if (c.inten && c.inten.veredicto && c.inten.veredicto.nivel === 'gris') return { icono: '🎚️', txt: 'Hubo mucha zona media: la próxima semana hacé los días fáciles de verdad fáciles (pulso por debajo del 90% de tu umbral) y guardá la energía para una sesión fuerte.' };
+  if (c.inten && c.inten.veredicto && c.inten.veredicto.nivel === 'intenso') return { icono: '🎚️', txt: 'Fue un período muy intenso: sumá una o dos salidas largas y suaves antes de volver a cargar series.' };
+  if (c.inten && c.inten.veredicto && c.inten.veredicto.nivel === 'facil') return { icono: '🎚️', txt: 'Todo fue suave: probá meter una sesión de intensidad (series cerca del umbral) esta semana, con un día fácil antes y después.' };
+  if (c.planSemana) return { icono: '✅', txt: 'Seguí con el plan: la semana que viene toca ' + formatoTiempoTotal(c.planSemana.horas * 3600) + ' al ' + c.planSemana.carga + '% de carga' + (c.planSemana.enTaper ? ' (en afinación)' : '') + '. Lo que traés se ve bien.' };
+  return { icono: '➕', txt: 'No hay un ciclo que cubra las próximas semanas: creá uno en la pestaña Ciclo y el informe te da una recomendación ajustada al plan y al evento.' };
+}
+
+/* ========================= INFORME: ARMADO ========================= */
+
+// Qué datos faltan (por app o por configuración), para decirlo en pantalla en vez de mostrar secciones vacías sin explicación.
+function informeFaltantes(ctx, per, R) {
+  const f = [];
+  const clavesApp = [['correr_sesiones', 'Correr', 'carrera'], ['bici_sesiones', 'Bici', 'bici'], ['kayak_sesiones', 'Kayak', 'kayak'], ['fuerza_sesiones', 'Fuerza', 'fuerza']];
+  clavesApp.forEach(([clave, nombre, dep]) => {
+    const hay = ctx.sesiones.some((s) => s.deporte === dep && !(s._x && s._x.soloRegistro));
+    if (!hay) f.push('No hay sesiones de ' + nombre + ' en este teléfono. Si la usás, abrí la app de ' + nombre + ' una vez desde este mismo navegador para que Mi plan pueda leerla.');
+  });
+  if (!ctx.registro.length) f.push('Todavía no hay sesiones en la Forma combinada: sin eso no se pueden calcular CTL ni TSB.');
+  if (!R.ses.length && ctx.sesiones.length) f.push('No hay sesiones registradas entre el ' + fechaCorta(per.desde) + ' y el ' + fechaCorta(per.hasta) + '.');
+  if (!listaCiclosOrdenados().length) f.push('No hay ningún ciclo creado: faltan el cumplimiento del plan y las proyecciones (pestaña Ciclo).');
+  else if (R.cumpl && R.cumpl.hayPlan && !R.cumpl.planeadas) f.push('El plan no tenía sesiones con horario en este período, así que no hay semáforo que mostrar.');
+  if (!ctx.hrv.length) f.push('No hay tests de HRV: para ver la recuperación hacé el test matutino en la pestaña Datos.');
+  if (!R.nutri) f.push('No hay datos de la app Nutrición en este período (ni calorías, ni peso, ni % de grasa).');
+  const u = ctx.umbrales || {};
+  if (!(u.ftpBici > 0) && ctx.sesiones.some((s) => s.deporte === 'bici')) f.push('Falta el FTP: sin él la intensidad de la bici se estima peor.');
+  if (!(u.pulsoUmbralCarrera > 0) && ctx.sesiones.some((s) => s.deporte === 'carrera')) f.push('Falta el pulso umbral de carrera: la distribución de intensidad usa solo la intensidad media de cada salida.');
+  if (!(ctx.perfil && +ctx.perfil.pesoKg > 0) && !(ctx.pesos && ctx.pesos.length)) f.push('Falta tu peso en el perfil (pestaña Datos): sin él no hay W/kg, VO2 máx de bici ni proteína por kg.');
+  if (R.hayCarreras && correrDetalle.estado === 'sin-cargar') f.push('Leyendo el detalle por segundo de Correr (mejores tiempos y tiempo en zonas)…');
+  else if (R.hayCarreras && correrDetalle.estado !== 'ok') f.push('No encontré el detalle por segundo de Correr en este navegador: los mejores tiempos de carrera se aproximan con la salida entera (solo cuentan salidas casi de esa distancia) y el tiempo en zonas con la intensidad media de cada salida.');
+  return f;
+}
+
+function construirInforme(ctx, per) {
+  const R = { per, ctx };
+  R.ses = sesionesEnRango(ctx, per.desde, per.hasta);
+  R.vol = resumenVolumen(R.ses);
+  R.volPrev = resumenVolumen(sesionesEnRango(ctx, per.previo.desde, per.previo.hasta));
+  const todosDias = {};
+  ctx.sesiones.forEach((s) => { todosDias[s.fecha] = true; });
+  R.rachas = rachasDias(todosDias, per.desde, per.hasta, ctx.hoy);
+  R.hayCarreras = ctx.sesiones.some((s) => s.deporte === 'carrera' && !(s._x && s._x.soloRegistro));
+  R.forma = calcularForma(ctx, per);
+  R.records = calcularRecords(ctx, per);
+  R.umbrales = calcularCambiosUmbrales(ctx, per);
+  R.vo2 = calcularCambiosVo2(ctx, per);
+  R.ef = calcularEficiencia(ctx, per);
+  R.inten = calcularIntensidad(ctx, per);
+  R.cumpl = calcularCumplimiento(ctx, per);
+  R.rec = calcularRecuperacion2(ctx, per, R.forma);
+  R.nutri = calcularNutricion(ctx, per);
+  R.prox = calcularProximo(ctx, R.forma, R.cumpl, R.inten, R.rec);
+  R.sinNada = !R.ses.length;
+  R.semSinFaltar = R.cumpl && R.cumpl.hayPlan ? semanasSinFaltar(ctx, per.hasta) : 0;
+  R.logros = calcularLogros(R);
+  R.frase = construirFrase(R);
+  R.faltantes = informeFaltantes(ctx, per, R);
+  return R;
+}
+
+/* ========================= INFORME: LOGROS Y FRASE ========================= */
+
+function calcularLogros(R) {
+  const L = [], per = R.per;
+  if (R.forma) {
+    [[100, '🏆'], [80, '🏆'], [60, '🥇'], [40, '🥈'], [20, '🥉']].some(([x, ic]) => {
+      const p = R.forma.serie.filter((q) => q.ctl >= x)[0];
+      if (p && p.fecha >= per.desde && p.fecha <= per.hasta) { L.push({ icono: ic, txt: 'Primera vez con CTL por encima de ' + x + ' (el ' + fechaCorta(p.fecha) + ')' }); return true; }
+      return false;
+    });
+    const ult = R.forma.serie.filter((q) => q.fecha >= per.desde && q.fecha <= per.hasta).reduce((m, q) => (q.ctl > m.ctl ? q : m), { ctl: -1 });
+    const antes = R.forma.serie.filter((q) => q.fecha < per.desde).reduce((m, q) => Math.max(m, q.ctl), 0);
+    if (R.forma.hayHistorialAntes && ult.ctl > antes + 0.5 && !L.some((l) => l.txt.indexOf('Primera vez') === 0)) L.push({ icono: '📈', txt: 'Tu mejor CTL hasta ahora: ' + fmtN(ult.ctl, 0) + ' (antes ' + fmtN(antes, 0) + ')' });
+  }
+  if (R.semSinFaltar >= 4) L.push({ icono: '🔥', txt: R.semSinFaltar + ' semanas seguidas sin faltar a ninguna sesión del plan' });
+  R.records.filter((r) => r.esRecord && !r.primera).forEach((r) => { L.push({ icono: '⭐', txt: 'Nueva marca en ' + r.etiqueta.toLowerCase() + ': ' + r.valorTxt }); });
+  if (R.rachas.max >= 5) L.push({ icono: '📅', txt: R.rachas.max + ' días seguidos entrenando' });
+  if (R.volPrev.seg > 0 && R.vol.seg > R.volPrev.seg * 1.1 && R.per.dias >= 7) L.push({ icono: '⏱️', txt: 'Más horas que el período anterior (+' + cambioPct(R.vol.seg, R.volPrev.seg) + '%)' });
+  R.vo2.forEach((v) => { if (v.ini != null && v.fin - v.ini >= 1) L.push({ icono: '🫁', txt: 'VO₂ máx. estimado de ' + v.etiqueta.toLowerCase() + ' arriba: ' + fmtN(v.ini, 0) + ' → ' + fmtN(v.fin, 0) }); });
+  R.umbrales.forEach((u) => { if (u.ini != null && u.mejorSiSube === true && u.fin > u.ini) L.push({ icono: '💪', txt: u.etiqueta + ' subió: ' + u.fmt(u.ini) + ' → ' + u.fmt(u.fin) }); if (u.ini != null && u.mejorSiSube === false && u.fin < u.ini) L.push({ icono: '💪', txt: u.etiqueta + ' mejoró: ' + u.fmt(u.ini) + ' → ' + u.fmt(u.fin) }); });
+  return L.slice(0, 6);
+}
+function construirFrase(R) {
+  const v = R.vol, per = R.per;
+  if (!v.n) return 'En este período no hay sesiones registradas. Volver a empezar es lo que cuenta: una salida corta hoy ya cambia el informe de mañana.';
+  const hs = formatoTiempoTotal(v.seg);
+  const principal = Object.keys(v.por).sort((a, b) => v.por[b].seg - v.por[a].seg)[0];
+  let f = 'Entrenaste ' + hs + ' en ' + v.dias + ' ' + (v.dias === 1 ? 'día' : 'días') + ', sobre todo ' + datosDeporte(principal).nombre.toLowerCase() + ' (' + Math.round(100 * v.por[principal].seg / Math.max(1, v.seg)) + '% del tiempo)';
+  const cp = cambioPct(v.seg, R.volPrev.seg);
+  if (cp != null && Math.abs(cp) >= 5) f += ', ' + Math.abs(cp) + '% ' + (cp > 0 ? 'más' : 'menos') + ' que el período anterior';
+  f += '. ';
+  if (R.forma) {
+    const d = R.forma.ctlFin - R.forma.ctlIni;
+    if (Math.abs(d) >= 0.5) f += 'Tu CTL ' + (d > 0 ? 'subió' : 'bajó') + ' de ' + fmtN(R.forma.ctlIni, 0) + ' a ' + fmtN(R.forma.ctlFin, 0) + '. ';
+    else f += 'Tu CTL se mantuvo en ' + fmtN(R.forma.ctlFin, 0) + '. ';
+  }
+  const rec = R.records.filter((r) => r.esRecord && !r.primera)[0];
+  if (rec) f += 'Además marcaste un récord: ' + rec.etiqueta.toLowerCase() + ', ' + rec.valorTxt + '. ';
+  else if (R.cumpl && R.cumpl.planeadas >= 2 && R.cumpl.pct >= 80) f += 'Cumpliste ' + R.cumpl.hechas + ' de ' + R.cumpl.planeadas + ' sesiones del plan. ';
+  if (R.prox.evento && R.prox.evento.dias >= 0 && R.prox.evento.dias <= 120) f += 'Faltan ' + R.prox.evento.dias + ' días para «' + R.prox.evento.nombre + '»: vas sumando.';
+  return f.trim();
+}
+
+/* ========================= INFORME: HTML ========================= */
+
+function deltaHtml(actual, previo, formato, mejorSiSube) {
+  if (previo == null || !(previo > 0) && !(actual > 0)) return '';
+  const d = actual - previo;
+  if (Math.abs(d) < 1e-9) return '<span class="infDelta" style="color:var(--text-dim)">= igual</span>';
+  const bien = mejorSiSube === false ? d < 0 : d > 0;
+  return '<span class="infDelta" style="color:' + (bien ? 'var(--ok)' : 'var(--text-dim)') + '">' + (d > 0 ? '▲ ' : '▼ ') + formato(Math.abs(d)) + '</span>';
+}
+function infTitulo(icono, txt) { return '<h3 class="infH">' + icono + ' ' + esc(txt) + '</h3>'; }
+function infGran(valor, etiqueta, delta) { return '<div class="infGran"><div class="infNum">' + valor + '</div><div class="infEt">' + esc(etiqueta) + '</div>' + (delta || '') + '</div>'; }
+function infNota(txt) { return '<p class="infNota">' + txt + '</p>'; }
+
+function htmlVolumen(R) {
+  const v = R.vol, p = R.volPrev, per = R.per;
+  if (!v.n) return '<div class="card">' + infTitulo('⏱️', 'Volumen') + infNota('Sin sesiones en este período.') + '</div>';
+  const horasTxt = (s) => fmtN(s / 3600, 1) + ' h';
+  let h = '<div class="card">' + infTitulo('⏱️', 'Volumen') + '<div class="infGrid">';
+  h += infGran(horasTxt(v.seg), 'horas', deltaHtml(v.seg, p.seg, (x) => horasTxt(x)));
+  h += infGran(String(v.n), 'sesiones', deltaHtml(v.n, p.n, (x) => String(x)));
+  h += infGran(v.dias + ' / ' + per.dias, 'días entrenados', deltaHtml(v.dias, p.dias, (x) => String(x)));
+  h += infGran(v.km > 0 ? fmtN(v.km, 0) + ' km' : '—', 'distancia', v.km > 0 ? deltaHtml(v.km, p.km, (x) => fmtN(x, 0) + ' km') : '');
+  h += '</div>';
+  h += '<table class="infTabla"><tr><th></th><th>Horas</th><th>Km</th><th>Ses.</th><th>vs. anterior</th></tr>';
+  Object.keys(v.por).sort((a, b) => v.por[b].seg - v.por[a].seg).forEach((k) => {
+    const d = datosDeporte(k), x = v.por[k], pr = p.por[k];
+    h += '<tr><td>' + d.icono + ' ' + esc(d.nombre) + '</td><td>' + (x.seg > 0 ? fmtN(x.seg / 3600, 1) : '—') + '</td><td>' + (x.m > 0 ? fmtN(x.m / 1000, 1) : '—') + '</td><td>' + x.n + '</td><td>' + (pr && pr.seg > 0 && x.seg > 0 ? deltaHtml(x.seg, pr.seg, (z) => fmtN(z / 3600, 1) + ' h') : (pr ? '' : '<span class="infDelta" style="color:var(--text-dim)">nuevo</span>')) + '</td></tr>';
+  });
+  h += '</table>';
+  const cp = cambioPct(v.seg, p.seg);
+  h += infNota('Racha más larga: <b>' + R.rachas.max + '</b> ' + (R.rachas.max === 1 ? 'día' : 'días') + ' seguidos' + (R.rachas.vigente > 1 ? ' · racha vigente: <b>' + R.rachas.vigente + '</b>' : '') + '. Comparado con el ' + esc(per.previo.txt) + (cp != null ? ' (' + (cp > 0 ? '+' : '') + cp + '% de horas)' : '') + '.');
+  if (v.por.natacion && v.por.natacion.seg === 0) h += infNota('Las sesiones de natación vienen sin duración: sumaron a la cantidad pero no a las horas.');
+  return h + '</div>';
+}
+
+function miniBarrasHtml(valores, etiquetas, color) {
+  const max = Math.max.apply(null, valores.concat([1]));
+  let h = '<div class="infBarras">';
+  valores.forEach((v, i) => { h += '<div class="infBarraCol"><div class="infBarraVal">' + Math.round(v) + '</div><div class="infBarra" style="height:' + Math.max(2, Math.round(60 * v / max)) + 'px;background:' + color + '"></div><div class="infBarraEt">' + esc(etiquetas[i]) + '</div></div>'; });
+  return h + '</div>';
+}
+function htmlForma(R) {
+  const f = R.forma;
+  if (!f) return '<div class="card">' + infTitulo('📈', 'Forma') + infNota('Sin datos de carga todavía: la Forma se arma con los TSS de tus sesiones.') + '</div>';
+  const b = bandaTsb(f.tsbFin), r = textoRampa(f.rampa);
+  let h = '<div class="card">' + infTitulo('📈', 'Forma') + '<div class="infGrid">';
+  h += infGran(fmtN(f.ctlIni, 0) + ' → ' + fmtN(f.ctlFin, 0), 'CTL (aptitud)', deltaHtml(f.ctlFin, f.ctlIni, (x) => fmtN(x, 1)));
+  h += infGran(fmtN(f.tssTotal, 0), 'TSS del período', f.tssPrevio != null ? deltaHtml(f.tssTotal, f.tssPrevio, (x) => fmtN(x, 0)) : '');
+  h += infGran(fmtSigno(f.rampa, 1), 'rampa por semana', '');
+  h += infGran(fmtSigno(f.tsbFin, 0), 'TSB al cierre', '');
+  h += '</div>';
+  if (f.tssSemanas.length >= 2) { h += miniBarrasHtml(f.tssSemanas.map((x) => x.tss), f.tssSemanas.map((x) => fechaCorta(x.desde)), 'var(--accent)'); h += infNota('TSS por semana (cada barra es la semana que empieza ese domingo).'); }
+  h += infNota('<span style="color:' + r.color + '">●</span> Rampa: ' + esc(r.txt) + '.<br><span style="color:' + b.color + '">●</span> TSB ' + fmtSigno(f.tsbFin, 0) + ': ' + esc(b.txt) + '.');
+  if (f.diasTsbBajo) h += infNota('⚠️ ' + f.diasTsbBajo + ' ' + (f.diasTsbBajo === 1 ? 'día' : 'días') + ' con TSB por debajo de −30.');
+  return h + '</div>';
+}
+function htmlMejoras(R) {
+  let h = '<div class="card">' + infTitulo('🏅', 'Mejoras');
+  let alguna = false;
+  if (R.records.length) {
+    alguna = true;
+    h += '<div class="infSub">Mejores marcas del período</div><div class="infLista">';
+    R.records.forEach((r) => {
+      const d = datosDeporte(r.deporte);
+      h += '<div class="infFila"><div>' + d.icono + ' ' + esc(r.etiqueta) + (r.esRecord ? ' <span class="infTag">' + (r.primera ? 'primera marca' : '¡récord!') + '</span>' : '') + '<div class="infSubFila">' + fechaCorta(r.fecha) + (r.extraTxt ? ' · ' + esc(r.extraTxt) : '') + (r.mejoraTxt ? ' · ' + esc(r.mejoraTxt) : '') + (r.cercaPct != null ? ' · al ' + r.cercaPct + '% de tu mejor (' + esc(r.anteriorTxt) + ')' : '') + (r.aprox ? ' · aprox.' : '') + '</div></div><div class="infValor">' + esc(r.valorTxt) + '</div></div>';
+    });
+    h += '</div>';
+    if (R.records.some((r) => r.aprox)) h += infNota('«aprox.» = calculado con la salida entera porque no pude leer las muestras de esa sesión.');
+  }
+  const cu = R.umbrales.filter((u) => u.ini != null && Math.round(u.ini * 10) !== Math.round(u.fin * 10));
+  if (cu.length) {
+    alguna = true;
+    h += '<div class="infSub">Umbrales y capacidades</div><div class="infLista">';
+    cu.forEach((u) => {
+      const mejor = u.neutro ? null : (u.mejorSiSube ? u.fin > u.ini : u.fin < u.ini);
+      h += '<div class="infFila"><div>' + u.icono + ' ' + esc(u.etiqueta) + '</div><div class="infValor" style="color:' + (mejor === null ? 'inherit' : (mejor ? 'var(--ok)' : 'var(--warn)')) + '">' + esc(u.fmt(u.ini)) + ' → ' + esc(u.fmt(u.fin)) + '</div></div>';
+    });
+    h += '</div>';
+  }
+  if (R.vo2.length) {
+    alguna = true;
+    h += '<div class="infSub">VO₂ máx. estimado (de campo)</div><div class="infLista">';
+    R.vo2.forEach((v) => {
+      h += '<div class="infFila"><div>' + v.icono + ' ' + esc(v.etiqueta) + '<div class="infSubFila">' + esc(v.metodo || '') + '</div></div><div class="infValor">' + (v.ini != null && Math.abs(v.fin - v.ini) >= 0.5 ? fmtN(v.ini, 0) + ' → ' : '') + fmtN(v.fin, 0) + '</div></div>';
+    });
+    h += '</div>' + infNota('Son estimaciones de campo, no una prueba de laboratorio: sirven para ver la tendencia.');
+  }
+  if (R.ef.length) {
+    alguna = true;
+    h += '<div class="infSub">Eficiencia aeróbica</div><div class="infLista">';
+    R.ef.forEach((e) => {
+      const cp = e.previo ? Math.round(100 * (e.actual - e.previo) / e.previo) : null;
+      h += '<div class="infFila"><div>' + esc(e.etiqueta) + '<div class="infSubFila">' + e.nActual + ' ' + (e.nActual === 1 ? 'salida' : 'salidas') + ' continuas de 30+ min' + (cp != null ? ' · ' + (cp >= 0 ? '+' : '') + cp + '% vs. anterior' : ' · sin período anterior para comparar') + '</div></div><div class="infValor">' + fmtN(e.actual, e.dec) + ' <span class="infUn">' + esc(e.unidad) + '</span></div></div>';
+    });
+    h += '</div>' + infNota('Más alta = más rendimiento por cada latido. El calor, el sueño y el cansancio también la mueven.');
+  }
+  if (!alguna) h += infNota('Sin marcas ni cambios de umbral en este período. Un test de FTP o de VMA, o una salida a fondo, llenan esta sección.');
+  return h + '</div>';
+}
+function htmlIntensidad(R) {
+  const I = R.inten;
+  let h = '<div class="card">' + infTitulo('🎚️', 'Distribución de intensidad');
+  if (!I.total) return h + infNota('Sin sesiones de resistencia con datos de intensidad en este período.') + '</div>';
+  const pc = (x) => Math.round(100 * x);
+  h += '<div class="infApilada"><div style="width:' + pc(I.p.baja) + '%;background:var(--ok)"></div><div style="width:' + pc(I.p.media) + '%;background:var(--accent)"></div><div style="width:' + pc(I.p.alta) + '%;background:var(--warn)"></div></div>';
+  h += '<div class="infLeyenda"><span><i style="background:var(--ok)"></i>Baja ' + pc(I.p.baja) + '% · ' + formatoTiempoTotal(I.seg.baja) + '</span><span><i style="background:var(--accent)"></i>Media ' + pc(I.p.media) + '% · ' + formatoTiempoTotal(I.seg.media) + '</span><span><i style="background:var(--warn)"></i>Alta ' + pc(I.p.alta) + '% · ' + formatoTiempoTotal(I.seg.alta) + '</span></div>';
+  h += infNota(esc(I.veredicto.txt));
+  const tot = I.exacto + I.aprox;
+  h += infNota(tot > 0 ? Math.round(100 * I.exacto / tot) + '% del tiempo se midió con el pulso o la potencia de cada momento; el resto se estimó con la intensidad media de cada salida. Cortes: baja &lt; 90% del pulso umbral (o 75% del FTP), alta &gt; 100% (o 105%).' : '');
+  if (I.sinDato > 0) h += infNota(formatoTiempoTotal(I.sinDato) + ' de sesiones no tenían datos para clasificarse.');
+  return h + '</div>';
+}
+function htmlCumplimiento(R) {
+  const c = R.cumpl;
+  let h = '<div class="card">' + infTitulo('🚦', 'Cumplimiento del plan');
+  if (!c || !c.hayPlan) return h + infNota('No hay un ciclo activo en este período: sin plan no hay semáforo.') + '</div>';
+  if (!c.planeadas) return h + infNota('No había sesiones con horario planificado para evaluar en este período.') + '</div>';
+  h += '<div class="infGrid">' + infGran(c.pct + '%', 'sesiones hechas') + infGran(c.hechas + ' / ' + c.planeadas, 'cumplidas') + infGran(String(c.parciales), 'parciales') + infGran(String(c.faltaron), 'no hechas') + '</div>';
+  h += '<div class="infPuntos">';
+  c.bloques.forEach((b) => { h += '<span class="infPunto" title="' + esc(b.label + ' ' + fechaCorta(b.fecha)) + '" style="background:' + colorCumplimiento(b.ratio < 0.25 ? 2 : b.ratio) + '"></span>'; });
+  h += '</div>' + infNota('Cada punto es una sesión del plan, de la más vieja a la más nueva, con el mismo semáforo del calendario: verde = duración cercana a la planificada; ámbar o rojo = te quedaste corto o te pasaste bastante (rojo también si no se hizo). Se cuenta como «hecha» desde el 75% de la duración planificada.');
+  h += '<table class="infTabla"><tr><th></th><th>Hechas</th><th>Plan</th><th>Real</th></tr>';
+  Object.keys(c.porDisc).forEach((k) => { const p = c.porDisc[k]; h += '<tr><td>' + esc(p.label) + '</td><td>' + p.hechas + '/' + p.n + '</td><td>' + fmtN(p.plan / 3600, 1) + ' h</td><td>' + fmtN(p.real / 3600, 1) + ' h</td></tr>'; });
+  h += '</table>';
+  if (R.semSinFaltar >= 2) h += infNota('🔥 ' + R.semSinFaltar + ' semanas completas seguidas sin faltar a nada.');
+  return h + '</div>';
+}
+function htmlRecuperacion(R) {
+  const r = R.rec;
+  let h = '<div class="card">' + infTitulo('😴', 'Recuperación'), alguno = false;
+  if (r.nHrv) {
+    alguno = true;
+    const cp = r.rmssdPrevio ? Math.round(100 * (r.rmssd - r.rmssdPrevio) / r.rmssdPrevio) : null;
+    h += '<div class="infFila"><div>HRV (RMSSD) promedio<div class="infSubFila">' + r.nHrv + ' ' + (r.nHrv === 1 ? 'test' : 'tests') + (cp != null ? ' · ' + (cp >= 0 ? '+' : '') + cp + '% vs. período anterior' : '') + '</div></div><div class="infValor">' + fmtN(r.rmssd, 0) + ' ms</div></div>';
+  }
+  if (r.estado) { alguno = true; h += '<div class="infFila"><div>Estado de tu HRV<div class="infSubFila">comparando la última semana con tu base</div></div><div class="infValor" style="color:' + r.estado.color + '">' + esc(r.estado.estado) + '</div></div>'; }
+  if (r.pulsoReposo) { alguno = true; h += '<div class="infFila"><div>Pulso en reposo<div class="infSubFila">promedio de los tests de HRV' + (r.pulsoReposoPrevio ? ' · antes ' + fmtN(r.pulsoReposoPrevio, 0) : '') + '</div></div><div class="infValor">' + fmtN(r.pulsoReposo, 0) + ' lpm</div></div>'; }
+  if (r.hayForma) { alguno = true; h += '<div class="infFila"><div>Días con TSB muy negativo<div class="infSubFila">menos de −30 = riesgo de sobrecarga</div></div><div class="infValor" style="color:' + (r.diasTsbBajo ? 'var(--warn)' : 'var(--ok)') + '">' + r.diasTsbBajo + '</div></div>'; }
+  if (!alguno) h += infNota('Sin datos de recuperación: hacé el test de HRV de la pestaña Datos.');
+  else if (r.nHrv && !r.estado) h += infNota('Para el estado de HRV hacen falta al menos 14 tests acumulados.');
+  return h + '</div>';
+}
+function htmlNutricion(R) {
+  const n = R.nutri;
+  let h = '<div class="card">' + infTitulo('🍽️', 'Nutrición');
+  if (!n) return h + infNota('Sin datos de la app Nutrición en este período.') + '</div>';
+  if (n.consumido != null) {
+    h += '<div class="infGrid">' + infGran(fmtN(n.consumido, 0), 'kcal comidas / día') + infGran(n.gasto != null ? fmtN(n.gasto, 0) : '—', 'kcal gastadas / día') + infGran(n.balance != null ? fmtSigno(n.balance, 0) : '—', 'balance / día') + infGran(n.protGkg != null ? fmtN(n.protGkg, 1) : '—', 'proteína g/kg') + '</div>';
+    h += infNota('Promedio de ' + n.diasConDatos + ' de ' + n.diasTotales + ' días con registro. Balance = comido − gastado (negativo = déficit).' + (n.protG != null ? ' Proteína: ' + fmtN(n.protG, 0) + ' g por día' + (n.protGkg != null ? (n.protGkg >= 1.4 ? ' (dentro del rango 1,4–2,0 g/kg para entrenar)' : ' (por debajo de 1,4 g/kg, el mínimo habitual para entrenar)') : '') + '.' : ''));
+  }
+  if (n.pesoFin != null) h += '<div class="infFila"><div>Peso<div class="infSubFila">último registro ' + fechaCorta(n.pesoFinFecha) + '</div></div><div class="infValor">' + (n.pesoIni != null && Math.abs(n.pesoIni - n.pesoFin) >= 0.05 ? fmtN(n.pesoIni, 1) + ' → ' : '') + fmtN(n.pesoFin, 1) + ' kg</div></div>';
+  if (n.grasaFin != null) h += '<div class="infFila"><div>Grasa corporal</div><div class="infValor">' + (n.grasaIni != null && Math.abs(n.grasaIni - n.grasaFin) >= 0.05 ? fmtN(n.grasaIni, 1) + ' → ' : '') + fmtN(n.grasaFin, 1) + ' %</div></div>';
+  return h + '</div>';
+}
+function htmlProximo(R) {
+  const p = R.prox;
+  let h = '<div class="card">' + infTitulo('🎯', 'Lo que viene');
+  if (p.evento) {
+    h += '<div class="infGrid">' + infGran(String(p.evento.dias), 'días para «' + p.evento.nombre + '»') + infGran(String(p.evento.semanas), 'semanas') + infGran(p.evento.ctl != null ? fmtN(p.evento.ctl, 0) : '—', 'CTL proyectado') + infGran(p.evento.tsb != null ? fmtSigno(p.evento.tsb, 0) : '—', 'TSB proyectado') + '</div>';
+    h += infNota('La proyección supone que cumplís el plan tal cual. Evento: ' + fechaLarga(p.evento.fecha) + '.');
+  } else if (p.proyeccion30) {
+    h += '<div class="infGrid">' + infGran(fmtN(p.proyeccion30.ctl, 0), 'CTL proyectado al ' + fechaCorta(p.proyeccion30.fecha)) + infGran(fmtSigno(p.proyeccion30.tsb, 0), 'TSB proyectado') + '</div>' + infNota('No hay un evento próximo cargado; esta es la proyección siguiendo el plan.');
+  } else h += infNota('Sin evento próximo ni plan para proyectar. Cargá uno en la pestaña Ciclo.');
+  h += '<div class="infRecom"><span>' + p.recomendacion.icono + '</span><div>' + esc(p.recomendacion.txt) + '</div></div>';
+  return h + '</div>';
+}
+function htmlCierre(R) {
+  let h = '<div class="card infCierre">' + infTitulo('🌟', 'Tus logros');
+  if (R.logros.length) h += '<div class="infLista">' + R.logros.map((l) => '<div class="infLogro"><span>' + l.icono + '</span><div>' + esc(l.txt) + '</div></div>').join('') + '</div>';
+  else h += infNota('Todavía sin hitos nuevos en este período. Los logros aparecen con las marcas, los récords de CTL y las rachas.');
+  h += '<p class="infFrase">“' + esc(R.frase) + '”</p>';
+  h += '<button class="primary" style="width:100%;padding:14px" id="btnCompartirInforme">📲 Compartir como imagen</button><div id="infCompartirEstado" class="infNota" style="margin-top:6px"></div></div>';
+  return h;
+}
+function htmlFaltantes(R) {
+  if (!R.faltantes.length) return '';
+  return '<div class="card infFalta">' + infTitulo('🧩', 'Qué falta para un informe completo') + '<ul>' + R.faltantes.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div>';
+}
+
+/* ========================= INFORME: IMAGEN PARA COMPARTIR ========================= */
+
+function partirTexto(ctx2d, texto, anchoMax) {
+  const palabras = String(texto).split(/\s+/), lineas = [];
+  let actual = '';
+  palabras.forEach((p) => {
+    const prueba = actual ? actual + ' ' + p : p;
+    if (ctx2d.measureText(prueba).width > anchoMax && actual) { lineas.push(actual); actual = p; } else actual = prueba;
+  });
+  if (actual) lineas.push(actual);
+  return lineas;
+}
+function rectRedondo(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function dibujarImagenInforme(R) {
+  const W = 1080, H = 1350, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  const C = { bg: '#0f1720', panel: '#16212c', line: '#2a3a48', text: '#e7edf2', dim: '#8ea3b3', acc: '#e0a458', ok: '#5fb88a', warn: '#d9705a' };
+  const fuente = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  c.fillStyle = C.bg; c.fillRect(0, 0, W, H);
+  c.fillStyle = C.acc; c.fillRect(0, 0, W, 10);
+  c.textBaseline = 'alphabetic'; c.textAlign = 'left';
+  c.fillStyle = C.dim; c.font = '600 30px ' + fuente; c.fillText('MI PLAN · INFORME DEL PERÍODO', 60, 90);
+  c.fillStyle = C.text; c.font = '700 58px ' + fuente;
+  let y = 165;
+  partirTexto(c, R.per.titulo, W - 120).slice(0, 2).forEach((l) => { c.fillText(l, 60, y); y += 66; });
+  c.fillStyle = C.dim; c.font = '400 30px ' + fuente; c.fillText(fechaLarga(R.per.desde) + ' al ' + fechaLarga(R.per.hasta), 60, y); y += 50;
+
+  const tiles = [];
+  tiles.push([R.vol.n ? fmtN(R.vol.seg / 3600, 1) + ' h' : '0 h', 'entrenadas', R.volPrev.seg > 0 && R.vol.seg > 0 ? (R.vol.seg >= R.volPrev.seg ? '▲ ' : '▼ ') + Math.abs(cambioPct(R.vol.seg, R.volPrev.seg)) + '% vs. anterior' : '']);
+  tiles.push([String(R.vol.n), 'sesiones', R.vol.dias + ' días entrenados']);
+  tiles.push([R.forma ? fmtN(R.forma.ctlFin, 0) : '—', 'CTL', R.forma ? (R.forma.ctlFin >= R.forma.ctlIni ? '▲ ' : '▼ ') + fmtN(Math.abs(R.forma.ctlFin - R.forma.ctlIni), 1) + ' en el período' : 'sin datos']);
+  tiles.push([R.cumpl && R.cumpl.planeadas ? R.cumpl.pct + '%' : '—', 'del plan cumplido', R.cumpl && R.cumpl.planeadas ? R.cumpl.hechas + ' de ' + R.cumpl.planeadas + ' sesiones' : 'sin plan']);
+  const tw = (W - 120 - 24) / 2, th = 175;
+  tiles.forEach((t, i) => {
+    const x = 60 + (i % 2) * (tw + 24), yy = y + Math.floor(i / 2) * (th + 24);
+    c.fillStyle = C.panel; rectRedondo(c, x, yy, tw, th, 22); c.fill();
+    c.strokeStyle = C.line; c.lineWidth = 2; rectRedondo(c, x, yy, tw, th, 22); c.stroke();
+    c.fillStyle = C.acc; c.font = '700 74px ' + fuente; c.fillText(t[0], x + 30, yy + 85);
+    c.fillStyle = C.text; c.font = '600 30px ' + fuente; c.fillText(t[1], x + 30, yy + 124);
+    c.fillStyle = C.dim; c.font = '400 26px ' + fuente; c.fillText(t[2], x + 30, yy + 156);
+  });
+  y += 2 * (th + 24) + 12;
+
+  // logros + frase: se prueba con hasta 4 logros y la frase en tamaño grande; si no entra, se achica la letra y después se quitan logros
+  c.fillStyle = C.dim; c.font = '600 28px ' + fuente; c.fillText('LOGROS', 60, y);
+  const yLogros = y + 16, pieY = H - 110;
+  let plan = null;
+  for (let nLog = Math.min(4, R.logros.length); nLog >= 0 && !plan; nLog--) {
+    c.font = '500 33px ' + fuente;
+    const lineasLog = R.logros.slice(0, nLog).map((l) => partirTexto(c, l.icono + '  ' + l.txt, W - 120).slice(0, 2));
+    const altoLog = nLog ? sumaArr(lineasLog.map((l) => l.length * 44 + 8)) : 56;
+    const yFrase = yLogros + altoLog + 30, disp = pieY - yFrase;
+    for (let fs = 36; fs >= 24; fs -= 2) {
+      c.font = '500 ' + fs + 'px ' + fuente;
+      const lin = partirTexto(c, R.frase, W - 120 - 80), lh = Math.round(fs * 1.38), alto = lin.length * lh + 56;
+      if (alto <= disp) { plan = { lineasLog, yFrase, fs, lin, lh, alto }; break; }
+    }
+    if (!plan && nLog === 0) {                       // último recurso: letra chica y frase recortada con «…»
+      const fs = 24; c.font = '500 ' + fs + 'px ' + fuente;
+      const lh = Math.round(fs * 1.38), maxL = Math.max(1, Math.floor((disp - 56) / lh));
+      let lin = partirTexto(c, R.frase, W - 120 - 80);
+      if (lin.length > maxL) { lin = lin.slice(0, maxL); lin[maxL - 1] = lin[maxL - 1].replace(/\s*\S*$/, '') + '…'; }
+      plan = { lineasLog, yFrase, fs, lin, lh, alto: lin.length * lh + 56 };
+    }
+  }
+  let yy2 = yLogros;
+  if (!R.logros.length) { c.fillStyle = C.dim; c.font = '500 33px ' + fuente; c.fillText('Seguimos sumando, semana a semana.', 60, yy2 + 44); }
+  c.font = '500 33px ' + fuente; c.fillStyle = C.text;
+  plan.lineasLog.forEach((lineas) => { lineas.forEach((ln) => { yy2 += 44; c.fillText(ln, 60, yy2); }); yy2 += 8; });
+  c.fillStyle = C.panel; rectRedondo(c, 60, plan.yFrase, W - 120, plan.alto, 24); c.fill();
+  c.fillStyle = C.acc; c.fillRect(60, plan.yFrase + 24, 8, plan.alto - 48);
+  c.fillStyle = C.text; c.font = '500 ' + plan.fs + 'px ' + fuente;
+  plan.lin.forEach((ln, i) => c.fillText(ln, 100, plan.yFrase + 28 + plan.lh * (i + 1) - Math.round(plan.fs * 0.25)));
+  c.fillStyle = C.dim; c.font = '400 26px ' + fuente; c.textAlign = 'right';
+  c.fillText('Mi plan · periodización de triatlón', W - 60, H - 50);
+  return cv;
+}
+function textoCompartirInforme(R) {
+  const l = ['*' + R.per.titulo + '* (' + fechaCorta(R.per.desde) + ' al ' + fechaCorta(R.per.hasta) + ')'];
+  l.push('⏱️ ' + (R.vol.n ? fmtN(R.vol.seg / 3600, 1) + ' h · ' + R.vol.n + ' sesiones · ' + R.vol.dias + ' días' : 'sin sesiones'));
+  if (R.forma) l.push('📈 CTL ' + fmtN(R.forma.ctlIni, 0) + ' → ' + fmtN(R.forma.ctlFin, 0) + ' · TSB ' + fmtSigno(R.forma.tsbFin, 0));
+  if (R.cumpl && R.cumpl.planeadas) l.push('🚦 Plan cumplido: ' + R.cumpl.pct + '%');
+  R.logros.slice(0, 3).forEach((x) => l.push(x.icono + ' ' + x.txt));
+  l.push('', R.frase);
+  return l.join('\n');
+}
+async function compartirInforme(R) {
+  const estado = document.getElementById('infCompartirEstado');
+  const decir = (t) => { if (estado) estado.textContent = t; };
+  try {
+    const cv = dibujarImagenInforme(R);
+    const blob = await new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error('no se pudo armar la imagen'))), 'image/png'));
+    const nombre = 'informe-' + R.per.desde + '_' + R.per.hasta + '.png';
+    const archivo = new File([blob], nombre, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [archivo] }) && navigator.share) {
+      try { await navigator.share({ files: [archivo], text: textoCompartirInforme(R), title: 'Mi informe de entrenamiento' }); decir('Listo: elegí WhatsApp en el menú de compartir.'); return; }
+      catch (e) { if (e && e.name === 'AbortError') { decir('Cancelaste el compartir.'); return; } /* otro error: probamos descargar */ }
+    }
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 20000);
+    decir('Tu navegador no deja compartir imágenes directo: la descargué (' + nombre + '). También podés mandar el resumen en texto:');
+    if (estado) {
+      const b = document.createElement('button'); b.className = 'small'; b.style.marginLeft = '6px'; b.textContent = 'Enviar texto por WhatsApp';
+      b.onclick = () => window.open('https://wa.me/?text=' + encodeURIComponent(textoCompartirInforme(R)), '_blank');
+      estado.appendChild(document.createElement('br')); estado.appendChild(b);
+    }
+  } catch (e) {
+    decir('No pude armar la imagen: ' + (e && e.message ? e.message : e) + '. Probá con el texto:');
+    if (estado) { const b = document.createElement('button'); b.className = 'small'; b.textContent = 'Enviar texto por WhatsApp'; b.onclick = () => window.open('https://wa.me/?text=' + encodeURIComponent(textoCompartirInforme(R)), '_blank'); estado.appendChild(document.createElement('br')); estado.appendChild(b); }
+  }
+}
+
+/* ========================= INFORME: PANTALLA ========================= */
+
+let informeUltimo = null;
+function renderInformeSelector(per) {
+  const cont = document.getElementById('infSelector');
+  if (!cont) return;
+  const e = informeEstado;
+  const tipos = [['semana', 'Semana'], ['mes', 'Mes'], ['meso', 'Mesociclo'], ['ciclo', 'Ciclo'], ['libre', 'Fechas']];
+  let h = '<div class="pTabs">' + tipos.map(([k, n]) => '<div class="pTab' + (e.tipo === k ? ' active' : '') + '" data-ptipo="' + k + '">' + n + '</div>').join('') + '</div>';
+  if (e.tipo === 'semana' || e.tipo === 'mes' || e.tipo === 'meso') {
+    const sigOff = per && !per.error && !(per.parcial || per.hasta >= hoyISO());
+    h += '<div class="infNav"><button class="small" id="infPrev">‹</button><div class="infNavTit">' + (per && !per.error ? esc(per.titulo) : '') + (per && per.sub ? '<div class="infSubFila">' + esc(per.sub) + '</div>' : '') + '</div><button class="small" id="infNext"' + (sigOff ? '' : ' disabled') + '>›</button></div>';
+  } else if (e.tipo === 'ciclo') {
+    const lista = listaCiclosOrdenados();
+    if (lista.length) h += '<select id="infCiclo" class="infSel">' + lista.map((c) => '<option value="' + esc(c.id) + '"' + (c.id === e.cicloId ? ' selected' : '') + '>' + esc(c.config.nombre || 'Ciclo') + ' (' + fechaCorta(c.config.fechaInicio) + ')</option>').join('') + '</select>';
+    if (per && !per.error && per.sub) h += '<div class="infNota">' + esc(per.sub) + '</div>';
+  } else {
+    const hoy = hoyISO();
+    h += '<div class="infFechas"><label>Desde<input type="date" id="infDesde" value="' + (e.desdeLibre || sumarDiasISO(hoy, -27)) + '" max="' + hoy + '"></label><label>Hasta<input type="date" id="infHasta" value="' + (e.hastaLibre || hoy) + '" max="' + hoy + '"></label></div>';
+  }
+  cont.innerHTML = h;
+  cont.querySelectorAll('[data-ptipo]').forEach((el) => { el.addEventListener('click', () => { informeEstado.tipo = el.getAttribute('data-ptipo'); informeEstado.offset = 0; renderInforme(); }); });
+  const p = document.getElementById('infPrev'), n = document.getElementById('infNext');
+  if (p) p.addEventListener('click', () => { informeEstado.offset--; renderInforme(); });
+  if (n) n.addEventListener('click', () => { informeEstado.offset++; renderInforme(); });
+  const sc = document.getElementById('infCiclo');
+  if (sc) sc.addEventListener('change', () => { informeEstado.cicloId = sc.value; renderInforme(); });
+  const d1 = document.getElementById('infDesde'), d2 = document.getElementById('infHasta');
+  if (d1) d1.addEventListener('change', () => { informeEstado.desdeLibre = d1.value; renderInforme(); });
+  if (d2) d2.addEventListener('change', () => { informeEstado.hastaLibre = d2.value; renderInforme(); });
+}
+function renderInforme() {
+  const cuerpo = document.getElementById('infCuerpo');
+  if (!cuerpo) return;
+  let per;
+  try { per = calcularPeriodoInforme(informeEstado); } catch (e) { per = { error: 'No pude calcular el período: ' + (e && e.message) }; }
+  renderInformeSelector(per);
+  if (per.error) { cuerpo.innerHTML = '<div class="card"><p class="infNota">' + esc(per.error) + '</p></div>'; informeUltimo = null; return; }
+  cargarCorrerDetalle(() => { if (document.getElementById('panel-informe').classList.contains('active')) renderInforme(); });
+  try {
+    const R = construirInforme(informeContexto(), per);
+    informeUltimo = R;
+    cuerpo.innerHTML =
+      '<div class="card infPortada"><div class="infPortadaTit">' + esc(per.titulo) + '</div><div class="infSubFila">' + fechaLarga(per.desde) + ' al ' + fechaLarga(per.hasta) + (per.parcial ? ' · período en curso (hasta hoy)' : '') + ' · comparado con el ' + esc(per.previo.txt) + '</div></div>' +
+      htmlFaltantes(R) + htmlVolumen(R) + htmlForma(R) + htmlMejoras(R) + htmlIntensidad(R) + htmlCumplimiento(R) + htmlRecuperacion(R) + htmlNutricion(R) + htmlProximo(R) + htmlCierre(R);
+    const b = document.getElementById('btnCompartirInforme');
+    if (b) b.addEventListener('click', () => compartirInforme(R));
+  } catch (e) {
+    informeUltimo = null;
+    cuerpo.innerHTML = '<div class="card"><p class="infNota">No pude armar el informe: ' + esc(e && e.message ? e.message : e) + '</p><button class="small" id="infCopiarError">Copiar detalle</button></div>';
+    const bc = document.getElementById('infCopiarError');
+    if (bc) bc.addEventListener('click', () => { try { navigator.clipboard.writeText(String(e && e.stack || e)); toast('Copiado'); } catch (x) { toast('No se pudo copiar'); } });
+  }
 }
 
 /* ========================= INIT ========================= */
