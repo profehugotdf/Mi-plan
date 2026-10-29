@@ -272,6 +272,26 @@
   .infLogro{display:flex;gap:10px;padding:5px 0;font-size:0.88rem;}
   .infFrase{font-size:1rem;line-height:1.5;margin:12px 0;padding:12px;background:var(--bg-panel-2);border-radius:10px;border-left:3px solid var(--accent);font-style:italic;}
 
+  /* --- Informe: impresión / guardar como PDF --- */
+  @media print{
+    :root{--bg:#fff;--bg-panel:#fff;--bg-panel-2:#f1f4f7;--line:#cfd6dd;--text:#1b2630;--text-dim:#55636f;--accent:#b8770f;--accent-dim:#b8770f;--ok:#2a8a5a;--warn:#c0472f;}
+    html,body{background:#fff !important;color:#1b2630 !important;padding:0 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    body.imprimiendoInforme > *:not(main),
+    body.imprimiendoInforme main > .tabs,
+    body.imprimiendoInforme .panel:not(#panel-informe),
+    body.imprimiendoInforme #panel-informe > .card:first-child,
+    body.imprimiendoInforme .toast,
+    body.imprimiendoInforme #btnCompartirInforme,
+    body.imprimiendoInforme #btnPdfInforme,
+    body.imprimiendoInforme #infCompartirEstado{display:none !important;}
+    body.imprimiendoInforme #panel-informe{display:block !important;}
+    body.imprimiendoInforme main{padding:0 !important;max-width:none !important;}
+    body.imprimiendoInforme .card{break-inside:avoid;page-break-inside:avoid;box-shadow:none;margin-bottom:10px;}
+    body.imprimiendoInforme .infPortadaTit{color:#b8770f;}
+    body.imprimiendoInforme .infFrase{break-inside:avoid;}
+    @page{margin:12mm;}
+  }
+
   ::-webkit-scrollbar{width:0;height:0;}
 </style>
 </head>
@@ -6046,7 +6066,7 @@ function htmlCierre(R) {
   if (R.logros.length) h += '<div class="infLista">' + R.logros.map((l) => '<div class="infLogro"><span>' + l.icono + '</span><div>' + esc(l.txt) + '</div></div>').join('') + '</div>';
   else h += infNota('Todavía sin hitos nuevos en este período. Los logros aparecen con las marcas, los récords de CTL y las rachas.');
   h += '<p class="infFrase">“' + esc(R.frase) + '”</p>';
-  h += '<button class="primary" style="width:100%;padding:14px" id="btnCompartirInforme">📲 Compartir como imagen</button><div id="infCompartirEstado" class="infNota" style="margin-top:6px"></div></div>';
+  h += '<button class="primary" style="width:100%;padding:14px" id="btnCompartirInforme">📲 Compartir como imagen</button><button style="width:100%;padding:14px;margin-top:8px" id="btnPdfInforme">📄 Guardar como PDF</button><div id="infCompartirEstado" class="infNota" style="margin-top:6px"></div></div>';
   return h;
 }
 function htmlFaltantes(R) {
@@ -6173,6 +6193,22 @@ async function compartirInforme(R) {
 /* ========================= INFORME: PANTALLA ========================= */
 
 let informeUltimo = null;
+// PDF: se usa el diálogo de impresión del navegador («Guardar como PDF»). El CSS @media print deja solo el informe, con fondo blanco.
+function imprimirInforme(R) {
+  const tituloOriginal = document.title;
+  const limpiar = () => { document.body.classList.remove('imprimiendoInforme'); document.title = tituloOriginal; window.removeEventListener('afterprint', limpiar); };
+  try {
+    document.title = 'Informe ' + R.per.desde + ' a ' + R.per.hasta;      // el navegador lo propone como nombre del archivo
+    document.body.classList.add('imprimiendoInforme');
+    window.addEventListener('afterprint', limpiar);
+    if (typeof window.print !== 'function') throw new Error('este navegador no puede imprimir');
+    window.print();
+  } catch (e) {
+    limpiar();
+    const est = document.getElementById('infCompartirEstado');
+    if (est) est.textContent = 'No pude abrir la impresión: ' + (e && e.message ? e.message : e) + '. Probá compartir como imagen.';
+  }
+}
 function renderInformeSelector(per) {
   const cont = document.getElementById('infSelector');
   if (!cont) return;
@@ -6217,6 +6253,8 @@ function renderInforme() {
       htmlFaltantes(R) + htmlVolumen(R) + htmlForma(R) + htmlMejoras(R) + htmlIntensidad(R) + htmlCumplimiento(R) + htmlRecuperacion(R) + htmlNutricion(R) + htmlProximo(R) + htmlCierre(R);
     const b = document.getElementById('btnCompartirInforme');
     if (b) b.addEventListener('click', () => compartirInforme(R));
+    const bp = document.getElementById('btnPdfInforme');
+    if (bp) bp.addEventListener('click', () => imprimirInforme(R));
   } catch (e) {
     informeUltimo = null;
     cuerpo.innerHTML = '<div class="card"><p class="infNota">No pude armar el informe: ' + esc(e && e.message ? e.message : e) + '</p><button class="small" id="infCopiarError">Copiar detalle</button></div>';
