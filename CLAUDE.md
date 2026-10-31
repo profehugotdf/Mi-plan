@@ -21,6 +21,7 @@ Lo comparten colegas, su hermano y su primo: la terminología de entrenamiento t
   - `fuerza_sesiones.fecha` es solo `AAAA-MM-DD`: no pasarla por funciones de fecha y hora.
 - Ciclo nuevo: si la persona no eligió todavía, un asistente pregunta qué deportes entrena y qué modelo de periodización quiere (`plan_preferencias_ciclo`). Sin elección guardada se toma la del último ciclo. `configBase()` es neutro (lineal, los 5 deportes); `configDefault()` le aplica las preferencias.
 - **Escribe**: `plan_preferencias_ciclo`, `plan_ciclos_v1`, `entrenamiento_umbrales`, `entrenamiento_perfil`, `entrenamiento_hrv_registro`, `entrenamiento_proximo_evento`, `entrenamiento_plan_hoy`.
+- **Recuperación estimada** ("¿Cómo estoy hoy?", fila Recuperación): `calcularRecuperacion(sesiones, ahoraMs, estadoHrv)` + `horasRecuperacionSesion(tss)` (pura). Horas por sesión = 0,3·TSS hasta 100, +0,45 por punto desde ahí, tope 96 h; se acumulan desde el fin de cada sesión y bajan 1 h por hora; HRV Bajo ×1,25, Desequilibrado ×1,1. Es una guía (no es Firstbeat) y no entra en el veredicto del semáforo (`info:true`). Prueba: `node tests/recuperacion.js`.
 - Sesiones de Rumbo: `importarDesdeRumbo()`, `tssRumbo()` y `rumboDuplicada()` / `limpiarDuplicadosRumbo()`. No se cuentan dos veces las salidas que también grabó una app dedicada.
 
 ## Quién y cómo trabajamos

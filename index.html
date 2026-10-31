@@ -322,7 +322,7 @@
       <h3>¿Cómo estoy hoy?</h3>
       <div id="readinessVeredicto" style="font-weight:700;font-size:1rem;margin:4px 0 10px"></div>
       <div id="readinessSenales"></div>
-      <p class="hint" style="margin-top:8px">Cruza HRV, Forma (TSB) y Nutrición del día — no es un score inventado, son las tres señales que ya tenés, juntas. Cada una queda "sin datos" si todavía no la cargaste.</p>
+      <p class="hint" style="margin-top:8px">Cruza HRV, Forma (TSB) y Nutrición del día (y, aparte, una recuperación estimada con el TSS de tus sesiones: ~0,3 h por punto de TSS hasta 100 y ~0,45 desde ahí, tope 96 h; es una guía, no una medición) — no es un score inventado, son las tres señales que ya tenés, juntas. Cada una queda "sin datos" si todavía no la cargaste.</p>
     </div>
     <div id="hoyEmpty" class="empty" style="display:none">
       <div class="big">📋</div>
@@ -4148,6 +4148,50 @@ function hoyISO() {
 
 const COLOR_NIVEL = { rojo: '#d9705a', amarillo: '#e0a458', verde: '#5fb88a', gris: '#8ea3b3' };
 
+/* ========================= RECUPERACIÓN (estimada, estilo Garmin) =========================
+   Hugo: "como esta función de Garmin (Recuperación: N horas), lo que pasa es que estoy usando mucho más mi ecosistema para registrar el
+   entrenamiento". Garmin (Firstbeat) calcula las horas con el efecto del entrenamiento de cada actividad; acá no hay ese dato, así que se
+   ESTIMA con el TSS de cada sesión de todas las apps (Correr, Bici, Kayak, Fuerza, Rumbo):
+   - horas de una sesión: 0,3 h por punto de TSS hasta 100 (TSS 50 → 15 h, 100 → 30 h) y 0,45 h por punto desde ahí (150 → 52 h, 200 → 75 h), con tope de 96 h;
+   - se suman en orden: lo que todavía te faltaba de la sesión anterior se arrastra, y a cada hora que pasa baja 1 hora (tope total 96 h);
+   - HRV: con la HRV baja se estira un 25 % lo que falta; "desequilibrada", un 10 %.
+   Es una guía para planificar, no una medición de tu recuperación real. Pura: no toca el DOM ni localStorage. */
+const REC_CAP_H = 96;
+function horasRecuperacionSesion(tss) {
+  if (!(tss > 0)) return 0;
+  return Math.min(REC_CAP_H, tss <= 100 ? 0.3 * tss : 30 + 0.45 * (tss - 100));
+}
+// sesiones: [{fecha 'AAAA-MM-DD', horaInicio 'HH:MM'|null, duracionSeg, tss}] · ahoraMs: Date.now() · estadoHrv: 'Bajo'|'Desequilibrado'|null
+// → { horas (lo que falta ahora, 0 si ya está), listoMs (cuándo), ultimaMs, base (sin ajuste por HRV), factorHrv }
+function calcularRecuperacion(sesiones, ahoraMs, estadoHrv) {
+  const ev = [];
+  (sesiones || []).forEach((x) => {
+    if (!(x.tss > 0) || !x.fecha) return;
+    const ini = new Date(x.fecha + 'T' + (x.horaInicio || '12:00')).getTime();
+    if (isNaN(ini)) return;
+    const fin = ini + (x.duracionSeg || 0) * 1000;
+    if (fin <= ahoraMs) ev.push({ fin, h: horasRecuperacionSesion(x.tss) });
+  });
+  ev.sort((a, b) => a.fin - b.fin);
+  let R = 0, t = null;
+  ev.forEach((e) => {
+    if (t != null) R = Math.max(0, R - (e.fin - t) / 3600000);
+    R = Math.min(REC_CAP_H, R + e.h); t = e.fin;
+  });
+  if (t == null) return { horas: 0, listoMs: ahoraMs, ultimaMs: null, base: 0, factorHrv: 1 };
+  const base = Math.max(0, R - (ahoraMs - t) / 3600000);
+  const factorHrv = estadoHrv === 'Bajo' ? 1.25 : (estadoHrv === 'Desequilibrado' ? 1.1 : 1);
+  const horas = base * factorHrv;
+  return { horas, listoMs: ahoraMs + horas * 3600000, ultimaMs: t, base, factorHrv };
+}
+function textoListoEn(ms) {
+  const d = new Date(ms), hoy = new Date(), man = new Date(hoy.getTime() + 86400000);
+  const hm = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  if (d.toDateString() === hoy.toDateString()) return 'hoy ' + hm;
+  if (d.toDateString() === man.toDateString()) return 'mañana ' + hm;
+  return ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'][d.getDay()] + ' ' + hm;
+}
+
 function calcularReadinessHoy() {
   const hoy = hoyISO();
   const senales = [];
@@ -4196,9 +4240,24 @@ function calcularReadinessHoy() {
   }
   senales.push({ label: 'Nutrición', detalle: detalleNut, nivel: nivelNut });
 
+  // Recuperación estimada (v. arriba): es informativa, no cambia el semáforo de las otras tres señales
+  try {
+    const sesRec = leerSesionesCrudas().filter((x) => !(x._x && x._x.noEntrenamiento));
+    const rec = calcularRecuperacion(sesRec, Date.now(), estadoHrv ? estadoHrv.estado : null);
+    let det, niv;
+    if (rec.ultimaMs == null) { det = 'sin sesiones con carga todavía'; niv = 'gris'; }
+    else if (rec.horas < 1) { det = '0 h — recuperado'; niv = 'verde'; }
+    else {
+      det = '~' + Math.round(rec.horas) + ' h — listo ' + textoListoEn(rec.listoMs) + (rec.factorHrv > 1 ? ' (ajustado por HRV)' : '') + ' · estimación';
+      niv = rec.horas > 48 ? 'rojo' : (rec.horas > 12 ? 'amarillo' : 'verde');
+    }
+    senales.push({ label: 'Recuperación', detalle: det, nivel: niv, info: true });
+  } catch (e) { console.warn('recuperación', e); }
+
   let veredicto = 'verde';
-  if (senales.some((s) => s.nivel === 'rojo')) veredicto = 'rojo';
-  else if (senales.some((s) => s.nivel === 'amarillo')) veredicto = 'amarillo';
+  const paraVeredicto = senales.filter((x) => !x.info);
+  if (paraVeredicto.some((x) => x.nivel === 'rojo')) veredicto = 'rojo';
+  else if (paraVeredicto.some((x) => x.nivel === 'amarillo')) veredicto = 'amarillo';
 
   return { veredicto, senales };
 }
