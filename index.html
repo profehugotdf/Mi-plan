@@ -315,6 +315,11 @@
   .mnBar.ok i{background:var(--ok);}
   .mnRacha{display:flex;align-items:center;gap:12px;}
   .mnRacha .n{font-size:2.4rem;font-weight:800;line-height:1;color:var(--accent);}
+  .mnSnLista{list-style:none;margin:8px 0 0;padding:0;font-size:0.85rem;}
+  .mnSnForm{margin-top:10px;display:grid;gap:8px;}
+  .mnSnHM{display:flex;align-items:center;gap:6px;}
+  .mnSnHM input{width:76px;text-align:center;}
+  .mnSnCal{display:flex;gap:6px;flex-wrap:wrap;}
   .mnSueno{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
   .mnSueno label{text-align:center;font-size:0.68rem;margin-bottom:2px;}
   .mnSueno input{text-align:center;padding:9px 2px;}
@@ -6522,10 +6527,26 @@ function mnRacha(ses, datos, cfg, hoy) {
   }
   return n;
 }
+// Sueño: horas y minutos <-> horas decimales (lo que guarda plan_minimos_sueno).
+function mnHorasDeHM(h, m) {
+  const hh = String(h == null ? '' : h).trim(), mm = String(m == null ? '' : m).trim();
+  if (hh === '' && mm === '') return null;
+  const H = hh === '' ? 0 : Number(hh.replace(',', '.')), M = mm === '' ? 0 : Number(mm.replace(',', '.'));
+  if (!isFinite(H) || !isFinite(M) || H < 0 || M < 0 || M >= 60) return null;
+  const tot = H + M / 60;
+  if (!(tot > 0) || tot > 16) return null;
+  return Math.round(tot * 10000) / 10000;
+}
+function mnFmtHM(horas) {
+  const min = Math.round(Number(horas) * 60);
+  return Math.floor(min / 60) + ':' + String(min % 60).padStart(2, '0');
+}
 // ===== FIN MÍNIMOS PURO =====
 
 const LS_MN_CFG = 'plan_minimos_config';
 const LS_MN_SUENO = 'plan_minimos_sueno';
+const LS_MN_SUENO_CAL = 'plan_minimos_sueno_calidad'; // {AAAA-MM-DD: 'mala'|'regular'|'buena'}, solo informativo
+const MN_CAL = { mala: '😞 Mala', regular: '😐 Regular', buena: '😊 Buena' };
 let mnOffset = 0; // 0 = semana actual, -1 = la anterior, etc.
 const MN_DIAS_CORTO = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const MN_ETIQ = { ok: '✔ Cumplido', curso: 'En camino', parcial: '◐ A medias', falta: '✖ Sin hacer', sin: 'Sin datos' };
@@ -6603,8 +6624,31 @@ function renderMinimosInterno() {
     sh += '<div><label for="mnSn' + i + '">' + MN_DIAS_CORTO[i] + '</label><input id="mnSn' + i + '" type="number" inputmode="decimal" step="0.5" min="0" max="16" data-dia="' + d + '" value="' + (sueno[d] || '') + '"' + (d > hoy ? ' disabled' : '') + '></div>';
   });
   sh += '</div><p class="hint">' + (r.sueno.promedio !== null ? 'Promedio ' + fmtN(r.sueno.promedio, 1) + ' h en ' + r.sueno.noches + ' noche(s) · meta ' + r.sueno.meta + ' h' : 'Meta ' + r.sueno.meta + ' h por noche') + '</p>';
+  const cal = leerJsonLS(LS_MN_SUENO_CAL, {});
+  const conDato = r.dias.filter((d) => sueno[d] > 0);
+  if (conDato.length) sh += '<ul class="mnSnLista">' + conDato.map((d) => '<li>' + esc(fechaCorta(d)) + ' · ' + mnFmtHM(sueno[d]) + ' h' + (cal[d] && MN_CAL[cal[d]] ? ' · ' + MN_CAL[cal[d]] : '') + '</li>').join('') + '</ul>';
+  const diasCarga = r.dias.filter((d) => d <= hoy);
+  sh += '<div class="mnSnForm"><label>Anotar noche (día en que te levantaste)</label>' +
+    '<select id="mnSnDia">' + diasCarga.map((d) => '<option value="' + d + '"' + (d === hoy ? ' selected' : '') + '>' + esc(fechaCorta(d)) + (d === hoy ? ' (hoy)' : '') + '</option>').join('') + '</select>' +
+    '<div class="mnSnHM"><input id="mnSnH" type="number" inputmode="numeric" min="0" max="16" placeholder="h"><span>h</span><input id="mnSnM" type="number" inputmode="numeric" min="0" max="59" placeholder="min"><span>min</span></div>' +
+    '<div class="mnSnCal">' + Object.keys(MN_CAL).map((k) => '<button type="button" class="ghost" data-cal="' + k + '">' + MN_CAL[k] + '</button>').join('') + '</div>' +
+    '<button type="button" class="primary" id="mnSnGuardar">Guardar sueño</button></div>';
   document.getElementById('mnSueno').innerHTML = sh;
-  document.querySelectorAll('#mnSueno input').forEach((inp) => {
+  let calSel = null;
+  document.querySelectorAll('#mnSueno [data-cal]').forEach((b) => b.addEventListener('click', () => {
+    calSel = b.getAttribute('data-cal');
+    document.querySelectorAll('#mnSueno [data-cal]').forEach((x) => x.style.outline = x === b ? '2px solid var(--accent)' : '');
+  }));
+  document.getElementById('mnSnGuardar').addEventListener('click', () => {
+    const dia = document.getElementById('mnSnDia').value;
+    const hrs = mnHorasDeHM(document.getElementById('mnSnH').value, document.getElementById('mnSnM').value);
+    if (hrs === null) { mnAvisar('Poné las horas y minutos que dormiste (entre 1 min y 16 h).'); return; }
+    const s2 = leerJsonLS(LS_MN_SUENO, {}); s2[dia] = hrs;
+    if (!mnEscribir(LS_MN_SUENO, s2)) return;
+    if (calSel) { const c2 = leerJsonLS(LS_MN_SUENO_CAL, {}); c2[dia] = calSel; if (!mnEscribir(LS_MN_SUENO_CAL, c2)) return; }
+    renderMinimos();
+  });
+  document.querySelectorAll('#mnSueno input[data-dia]').forEach((inp) => {
     inp.addEventListener('change', () => {
       const s = leerJsonLS(LS_MN_SUENO, {});
       const v = parseFloat(String(inp.value).replace(',', '.'));

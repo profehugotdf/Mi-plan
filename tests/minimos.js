@@ -7,7 +7,7 @@ const corte = (desde, hasta) => { const a = s.indexOf(desde), b = s.indexOf(hast
 const codigo = corte('function sumarDiasISO', 'function configDesdeFormulario') +
   corte('function utcDeISO', 'function rangoDiasISO') +
   corte('// ===== INICIO MÍNIMOS PURO =====', '// ===== FIN MÍNIMOS PURO =====');
-const M = new Function(codigo + '; return {inicioSemanaISO, sumarDiasISO, mnNormalizar, mnCfgEfectiva, mnNutriDia, mnResumenSemana, mnRacha};')();
+const M = new Function(codigo + '; return {inicioSemanaISO, sumarDiasISO, mnNormalizar, mnCfgEfectiva, mnNutriDia, mnResumenSemana, mnRacha, mnHorasDeHM, mnFmtHM};')();
 
 let n = 0;
 const t = (nombre, fn) => { try { fn(); n++; console.log('ok  - ' + nombre); } catch (e) { console.log('FALLA - ' + nombre + '\n   ' + e.message); process.exitCode = 1; } };
@@ -162,6 +162,24 @@ t('si la semana en curso ya está cumplida, suma a la racha', () => {
     { deporte: 'fuerza', fecha: '2026-11-01', duracionSeg: 2100 }, { deporte: 'fuerza', fecha: '2026-11-02', duracionSeg: 2100 },
     { deporte: 'carrera', fecha: '2026-11-02', duracionSeg: 9000 }]);
   assert.strictEqual(M.mnRacha(x, Object.assign({}, datos, { nutriDia: M.mnNutriDia({}) }), cfg, HOY), 1);
+});
+
+t('7 h 17 min se guarda como horas decimales y vuelve a mostrarse 7:17', () => {
+  const h = M.mnHorasDeHM(7, 17);
+  assert.ok(Math.abs(h - 7.2833) < 0.001);
+  assert.strictEqual(M.mnFmtHM(h), '7:17');
+});
+t('mnHorasDeHM rechaza vacío, negativos y más de 16 h', () => {
+  assert.strictEqual(M.mnHorasDeHM('', ''), null);
+  assert.strictEqual(M.mnHorasDeHM(0, 0), null);
+  assert.strictEqual(M.mnHorasDeHM(-1, 10), null);
+  assert.strictEqual(M.mnHorasDeHM(16, 30), null);
+  assert.strictEqual(M.mnHorasDeHM(7, 75), null);
+});
+t('solo minutos o solo horas es válido; 7,5 h se muestra 7:30', () => {
+  assert.strictEqual(M.mnHorasDeHM('', 45), 0.75);
+  assert.strictEqual(M.mnHorasDeHM(8, ''), 8);
+  assert.strictEqual(M.mnFmtHM(7.5), '7:30');
 });
 
 console.log('\n' + n + ' pruebas pasaron' + (process.exitCode ? ' (hubo fallas)' : ''));
