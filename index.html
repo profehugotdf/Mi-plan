@@ -50,8 +50,9 @@
 
   main{max-width:720px;margin:0 auto;padding:14px 12px 24px;}
 
-  .tabs{display:flex;gap:6px;margin-bottom:14px;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5;}
-  .tab{flex:1 1 auto;text-align:center;padding:9px 4px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.74rem;font-weight:600;cursor:pointer;user-select:none;}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;position:sticky;top:0;background:var(--bg);padding:8px 0;z-index:5;overflow-x:auto;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex:1 1 auto;white-space:nowrap;text-align:center;padding:9px 6px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.74rem;font-weight:600;cursor:pointer;user-select:none;}
   .tab.active{background:var(--accent);color:#1a1206;border-color:var(--accent);}
 
   .vistaTab{flex:1;text-align:center;padding:9px 6px;border-radius:9px;background:var(--bg-panel);border:1px solid var(--line);color:var(--text-dim);font-size:0.8rem;font-weight:600;cursor:pointer;user-select:none;}
@@ -293,6 +294,36 @@
   }
 
   ::-webkit-scrollbar{width:0;height:0;}
+
+  /* ---- Mínimos semanales ---- */
+  .mnNav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px;}
+  .mnNav button{min-width:52px;min-height:46px;font-size:1.3rem;padding:0;}
+  .mnNav button:disabled{opacity:.35;}
+  .mnNav .tit{flex:1;text-align:center;}
+  .mnNav .tit b{display:block;font-size:1rem;}
+  .mnNav .tit span{font-size:0.75rem;color:var(--text-dim);}
+  .mnChip{display:inline-block;font-size:0.72rem;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;text-transform:none;letter-spacing:0;}
+  .mn-ok{background:rgba(95,184,138,.16);color:var(--ok);}
+  .mn-parcial{background:rgba(224,164,88,.16);color:var(--accent);}
+  .mn-falta{background:rgba(217,112,90,.16);color:var(--warn);}
+  .mn-sin,.mn-curso{background:var(--bg-panel-2);color:var(--text-dim);}
+  .mnHead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+  .mnBig{font-size:1.45rem;font-weight:700;margin:2px 0;color:var(--text);}
+  .mnBig small{font-size:0.8rem;font-weight:400;color:var(--text-dim);}
+  .mnBar{height:9px;border-radius:5px;background:var(--bg-panel-2);overflow:hidden;margin:6px 0;}
+  .mnBar i{display:block;height:100%;background:var(--accent);border-radius:5px;}
+  .mnBar.ok i{background:var(--ok);}
+  .mnRacha{display:flex;align-items:center;gap:12px;}
+  .mnRacha .n{font-size:2.4rem;font-weight:800;line-height:1;color:var(--accent);}
+  .mnSueno{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  .mnSueno label{text-align:center;font-size:0.68rem;margin-bottom:2px;}
+  .mnSueno input{text-align:center;padding:9px 2px;}
+  .mnCfg{display:grid;grid-template-columns:1fr 92px;gap:8px 10px;align-items:center;font-size:0.82rem;color:var(--text-dim);}
+  .mnCfg label{margin:0;}
+  .mnHist th,.mnHist td{text-align:center;padding:4px 2px;font-size:0.72rem;}
+  .mnHist th:first-child,.mnHist td:first-child{text-align:left;}
+  .mnHist td.c{font-weight:700;border-radius:6px;border-bottom:none;}
+  .mnAviso{display:none;background:rgba(217,112,90,.16);color:var(--warn);border-radius:10px;padding:10px;margin-bottom:12px;font-size:0.82rem;}
 </style>
 </head>
 <body>
@@ -310,6 +341,7 @@
   <div class="tabs">
     <div class="tab active" data-tab="hoy">Plan de hoy</div>
     <div class="tab" data-tab="calendario">Calendario</div>
+    <div class="tab" data-tab="minimos">Mínimos</div>
     <div class="tab" data-tab="ciclo">Ciclo</div>
     <div class="tab" data-tab="grafico">Gráfico</div>
     <div class="tab" data-tab="datos">Datos</div>
@@ -859,6 +891,46 @@
       <button class="danger" id="btnBorrarCiclo">Borrar ciclo activo</button>
     </div>
   </section>
+  <!-- MÍNIMOS SEMANALES -->
+  <section class="panel" id="panel-minimos">
+    <div id="mnAviso" class="mnAviso" role="alert"></div>
+    <div class="card" style="padding:12px">
+      <h3>Mínimos de la semana</h3>
+      <p class="hint" style="margin-bottom:0">Lo básico que sostiene la salud a largo plazo: fuerza, trabajo aeróbico, proteína y sueño. Sale de lo que ya cargaste en tus apps. La semana va de domingo a sábado, como el resto de la app.</p>
+    </div>
+    <div class="mnNav">
+      <button id="mnPrev" aria-label="Semana anterior">‹</button>
+      <div class="tit"><b id="mnSemTit"></b><span id="mnSemSub"></span></div>
+      <button id="mnNext" aria-label="Semana siguiente">›</button>
+    </div>
+    <div id="mnVacio"></div>
+    <div id="mnRacha" class="card"></div>
+    <div id="mnPilares"></div>
+    <div class="card">
+      <div class="mnHead"><h3 style="margin:0">Sueño</h3><span id="mnChipSueno"></span></div>
+      <div id="mnSueno"></div>
+      <p class="hint">Cargá a mano las horas que dormiste cada noche (la del día en que te levantaste). Todavía ninguna de las apps lo registra.</p>
+    </div>
+    <div class="card">
+      <h3>Últimas 8 semanas</h3>
+      <div id="mnHist"></div>
+      <p class="hint">✔ cumplido · ◐ a medias · ✖ sin hacer · – sin datos</p>
+    </div>
+    <div class="card">
+      <details>
+        <summary style="cursor:pointer;font-weight:600;font-size:0.85rem">Metas</summary>
+        <div id="mnCfg" class="mnCfg" style="margin-top:10px"></div>
+        <p class="hint">Referencias generales de actividad física de la OMS: 150 min de aeróbico y 2 días de fuerza por semana. Ajustalas a tu medida. En la proteína, el peso sale de Perfil (Datos).</p>
+      </details>
+    </div>
+    <div class="card">
+      <details>
+        <summary style="cursor:pointer;font-weight:600;font-size:0.85rem">Qué datos leyó</summary>
+        <div id="mnFuentes" style="margin-top:10px"></div>
+        <p class="hint">Son las mismas sesiones del Informe: las de tus apps más natación y lo importado de Garmin. Las de calibración de Kayak no cuentan.</p>
+      </details>
+    </div>
+  </section>
   <section class="panel" id="panel-informe">
     <div class="card" style="padding:12px">
       <h3>Informe del período</h3>
@@ -1301,6 +1373,7 @@ document.querySelectorAll('.tab').forEach((tab) => {
     document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab === 'hoy') renderHoy();
     if (tab.dataset.tab === 'calendario') renderCalendario();
+    if (tab.dataset.tab === 'minimos') renderMinimos();
     if (tab.dataset.tab === 'datos') renderVo2Max();
     if (tab.dataset.tab === 'informe') renderInforme();
     if (tab.dataset.tab === 'grafico') { renderPanorama(); renderGraficoCiclo(); renderProyeccionForma(); renderVolumen(); }
@@ -6321,6 +6394,275 @@ function renderInforme() {
     if (bc) bc.addEventListener('click', () => { try { navigator.clipboard.writeText(String(e && e.stack || e)); toast('Copiado'); } catch (x) { toast('No se pudo copiar'); } });
   }
 }
+
+/* ========================= MÍNIMOS SEMANALES ========================= */
+// Fuerza, aeróbico, proteína y sueño por semana (domingo a sábado, igual que el calendario y el Informe).
+// Lee las mismas sesiones que el Informe (informeContexto: apps + natación + Garmin importado, ya con fecha LOCAL)
+// y el resumen diario de Nutrición. Solo ESCRIBE sus propias claves: plan_minimos_config y plan_minimos_sueno.
+// La parte entre los marcadores es pura (sin DOM ni localStorage) y se prueba con Node: tests/minimos.js.
+// ===== INICIO MÍNIMOS PURO =====
+const MN_CFG_DEF = { fuerzaSesiones: 2, fuerzaMin: 60, aerobicoMin: 150, proteinaGkg: null, proteinaDias: 5, suenoHoras: 7, pesoKg: null };
+
+function mnNum(x) { const n = Number(x); return (isFinite(n) && n > 0) ? n : 0; }
+function mnLista(x) { return Array.isArray(x) ? x : []; }
+function mnObj(x) { return (x && typeof x === 'object' && !Array.isArray(x)) ? x : {}; }
+
+// De las sesiones del Informe ({deporte, fecha 'AAAA-MM-DD' local, duracionSeg}) a {tipo, clave, min}.
+function mnNormalizar(sesiones) {
+  return mnLista(sesiones).filter((s) => s && s.fecha && s.deporte).map((s) => {
+    const min = mnNum(s.duracionSeg) / 60;
+    return { deporte: s.deporte, tipo: s.deporte === 'fuerza' ? 'fuerza' : 'aerobico', clave: String(s.fecha).slice(0, 10), min, sinDuracion: min === 0 };
+  });
+}
+
+function mnCfgEfectiva(datos, guardada) {
+  const g = mnObj(guardada), c = {};
+  Object.keys(MN_CFG_DEF).forEach((k) => { c[k] = (g[k] !== undefined && g[k] !== null && g[k] !== '') ? Number(g[k]) : MN_CFG_DEF[k]; });
+  let peso = null, origen = null;
+  if (mnNum(mnObj(datos.perfil).pesoKg)) { peso = mnNum(datos.perfil.pesoKg); origen = 'perfil'; }
+  else if (mnNum(datos.pesoNutri)) { peso = mnNum(datos.pesoNutri); origen = 'nutricion'; }
+  else if (mnNum(c.pesoKg)) { peso = mnNum(c.pesoKg); origen = 'manual'; }
+  c.pesoKg = peso; c.pesoOrigen = origen;
+  c.proteinaGkg = mnNum(g.proteinaGkg) || mnNum(datos.factorProt) || 1.6;
+  c.proteinaMetaG = peso ? Math.round(c.proteinaGkg * peso) : null;
+  return c;
+}
+
+// Devuelve una función fecha -> resumen de Nutrición de ese día, leyendo el dato UNA sola vez.
+// Tolera los dos formatos que tolera nutricionDia(): objeto {fecha:{...}} o array [{fecha,...}].
+function mnNutriDia(nutri) {
+  return (d) => {
+    if (Array.isArray(nutri)) return nutri.find((x) => x && String(x.fecha || '').slice(0, 10) === d) || null;
+    return (nutri && typeof nutri === 'object' && nutri[d]) ? nutri[d] : null;
+  };
+}
+
+function mnEstadoPilar(cumple, hayAlgo, enCurso, sinDatos) {
+  if (sinDatos) return 'sin';
+  if (cumple) return 'ok';
+  if (enCurso) return 'curso';
+  return hayAlgo ? 'parcial' : 'falta';
+}
+
+// Resumen de una semana que arranca el domingo `inicio`. datos.nutriDia(fecha) devuelve el resumen de Nutrición de ese día (o null).
+function mnResumenSemana(ses, inicio, datos, cfg, hoy) {
+  const dias = [];
+  for (let i = 0; i < 7; i++) dias.push(sumarDiasISO(inicio, i));
+  const enCurso = hoy >= dias[0] && hoy <= dias[6];
+  const futura = hoy < dias[0];
+  const enSemana = ses.filter((s) => dias.indexOf(s.clave) >= 0);
+
+  const fu = enSemana.filter((s) => s.tipo === 'fuerza');
+  const fuMin = fu.reduce((a, s) => a + s.min, 0);
+  const fuerza = {
+    sesiones: fu.length, min: Math.round(fuMin), metaSesiones: cfg.fuerzaSesiones, metaMin: cfg.fuerzaMin,
+    estado: mnEstadoPilar(fu.length >= cfg.fuerzaSesiones && fuMin >= cfg.fuerzaMin, fu.length > 0, enCurso, false),
+  };
+
+  const ae = enSemana.filter((s) => s.tipo === 'aerobico');
+  const aeMin = ae.reduce((a, s) => a + s.min, 0);
+  const porDeporte = {};
+  ae.forEach((s) => { porDeporte[s.deporte] = (porDeporte[s.deporte] || 0) + s.min; });
+  const aerobico = {
+    sesiones: ae.length, min: Math.round(aeMin), meta: cfg.aerobicoMin, porDeporte,
+    sinDuracion: ae.filter((s) => s.sinDuracion).length,
+    estado: mnEstadoPilar(aeMin >= cfg.aerobicoMin, ae.length > 0, enCurso, false),
+  };
+
+  const nutriDia = typeof datos.nutriDia === 'function' ? datos.nutriDia : () => null;
+  let conDato = 0, cumplidos = 0;
+  dias.forEach((d) => {
+    const p = mnNum(mnObj(nutriDia(d)).proteinasG);
+    if (p > 0) { conDato++; if (cfg.proteinaMetaG && p >= cfg.proteinaMetaG) cumplidos++; }
+  });
+  const proteina = {
+    diasConDato: conDato, diasCumplidos: cumplidos, metaDias: cfg.proteinaDias, metaG: cfg.proteinaMetaG,
+    estado: mnEstadoPilar(cumplidos >= cfg.proteinaDias, cumplidos > 0, enCurso, conDato === 0 || !cfg.proteinaMetaG),
+  };
+
+  // Calorías: solo informativo. En la semana en curso se deja afuera hoy: a medio día lo consumido todavía es poco
+  // y se vería como un déficit que no es real.
+  let sumSup = 0, nSup = 0;
+  dias.forEach((d) => {
+    if (enCurso && d === hoy) return;
+    const r = mnObj(nutriDia(d));
+    const c = mnNum(r.consumido), g = mnNum(r.gastoTotal);
+    if (c > 0 && g > 0) { sumSup += (c - g); nSup++; }
+  });
+  const calorias = { dias: nSup, superavitPromedio: nSup ? Math.round(sumSup / nSup) : null };
+
+  const sueno = mnObj(datos.sueno);
+  const horas = [];
+  dias.forEach((d) => { const h = mnNum(sueno[d]); if (h > 0) horas.push(h); });
+  const prom = horas.length ? horas.reduce((a, b) => a + b, 0) / horas.length : null;
+  const suenoRes = {
+    noches: horas.length, promedio: prom === null ? null : Math.round(prom * 10) / 10, meta: cfg.suenoHoras,
+    estado: horas.length === 0 ? 'sin' : (prom >= cfg.suenoHoras ? 'ok' : (enCurso ? 'curso' : (prom >= cfg.suenoHoras - 1 ? 'parcial' : 'falta'))),
+  };
+
+  // Semana cumplida = fuerza y aeróbico en verde; proteína en verde o sin datos de Nutrición.
+  // El sueño (carga manual) y las calorías (informativas) no cuentan.
+  const cumplida = fuerza.estado === 'ok' && aerobico.estado === 'ok' && (proteina.estado === 'ok' || proteina.estado === 'sin');
+  return { inicio, dias, enCurso, futura, fuerza, aerobico, proteina, calorias, sueno: suenoRes, cumplida };
+}
+
+// Semanas seguidas cumplidas. La semana en curso suma si ya está cumplida; si todavía no, no corta la racha.
+function mnRacha(ses, datos, cfg, hoy) {
+  let primera = null;
+  ses.forEach((s) => { if (primera === null || s.clave < primera) primera = s.clave; });
+  if (primera === null) return 0;
+  const tope = inicioSemanaISO(primera);
+  let inicio = inicioSemanaISO(hoy), n = 0, primeraVuelta = true;
+  for (let i = 0; i < 260 && inicio >= tope; i++) {
+    const r = mnResumenSemana(ses, inicio, datos, cfg, hoy);
+    if (r.cumplida) n++;
+    else if (!(primeraVuelta && r.enCurso)) break;
+    primeraVuelta = false;
+    inicio = sumarDiasISO(inicio, -7);
+  }
+  return n;
+}
+// ===== FIN MÍNIMOS PURO =====
+
+const LS_MN_CFG = 'plan_minimos_config';
+const LS_MN_SUENO = 'plan_minimos_sueno';
+let mnOffset = 0; // 0 = semana actual, -1 = la anterior, etc.
+const MN_DIAS_CORTO = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+const MN_ETIQ = { ok: '✔ Cumplido', curso: 'En camino', parcial: '◐ A medias', falta: '✖ Sin hacer', sin: 'Sin datos' };
+const MN_SIMB = { ok: '✔', curso: '…', parcial: '◐', falta: '✖', sin: '–' };
+
+function mnAvisar(msg) { const a = document.getElementById('mnAviso'); if (!a) return; a.textContent = msg; a.style.display = msg ? 'block' : 'none'; }
+// Al escribir no se calla nada: si no entra, se ve en pantalla.
+function mnEscribir(k, v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); mnAvisar(''); return true; }
+  catch (e) { mnAvisar('No pude guardar (' + k + '): ' + e.message + '. Puede ser que el espacio compartido esté lleno: probá con la app de Backup.'); return false; }
+}
+function mnChip(e) { return '<span class="mnChip mn-' + e + '">' + MN_ETIQ[e] + '</span>'; }
+function mnBarra(v, meta) { const p = meta > 0 ? Math.min(100, Math.round(100 * v / meta)) : 0; return '<div class="mnBar ' + (v >= meta ? 'ok' : '') + '"><i style="width:' + p + '%"></i></div>'; }
+function mnNombreDeporte(k) { return esc(DISC_LABEL[k] || k); }
+
+function renderMinimos() {
+  try { renderMinimosInterno(); }
+  catch (e) { mnAvisar('No pude armar Mínimos: ' + (e && e.message ? e.message : e)); }
+}
+
+function renderMinimosInterno() {
+  const ctx = informeContexto();
+  const ses = mnNormalizar(ctx.sesiones);
+  const datos = {
+    sueno: leerJsonLS(LS_MN_SUENO, {}), perfil: leerPerfil(), pesoNutri: leerJsonLS('nutricion_peso_kg', null),
+    factorProt: leerJsonLS('nutricion_factor_proteina', null), nutriDia: mnNutriDia(leerNutricionResumen()),
+  };
+  const cfg = mnCfgEfectiva(datos, leerJsonLS(LS_MN_CFG, {}));
+  const hoy = hoyISO();
+  const inicio = sumarDiasISO(inicioSemanaISO(hoy), mnOffset * 7);
+  const r = mnResumenSemana(ses, inicio, datos, cfg, hoy);
+
+  document.getElementById('mnVacio').innerHTML = ses.length === 0
+    ? '<div class="card"><p>Todavía no encontré ninguna sesión. Esta pestaña usa las que cargues en Correr, Bici, Kayak, Fuerza o importes de Garmin.</p></div>' : '';
+  document.getElementById('mnPrev').disabled = mnOffset <= -52;
+  document.getElementById('mnNext').disabled = mnOffset >= 0;
+  document.getElementById('mnSemTit').textContent = mnOffset === 0 ? 'Esta semana' : (mnOffset === -1 ? 'Semana pasada' : 'Hace ' + (-mnOffset) + ' semanas');
+  document.getElementById('mnSemSub').textContent = fechaCorta(r.dias[0]) + ' al ' + fechaCorta(r.dias[6]);
+
+  const racha = mnRacha(ses, datos, cfg, hoy);
+  document.getElementById('mnRacha').innerHTML =
+    '<div class="mnRacha"><div class="n">' + racha + '</div><div><b>' + (racha === 1 ? 'semana seguida' : 'semanas seguidas') + '</b>' +
+    '<p class="hint" style="margin:0">cumpliendo fuerza y aeróbico' + (r.proteina.estado === 'sin' ? '' : ' y proteína') + '</p></div></div>';
+
+  const f = r.fuerza, a = r.aerobico, p = r.proteina, c = r.calorias;
+  const porDep = Object.keys(a.porDeporte).map((k) => mnNombreDeporte(k) + ' ' + fmtN(a.porDeporte[k]) + ' min').join(' · ');
+  let h = '';
+  h += '<div class="card"><div class="mnHead"><h3 style="margin:0">Fuerza</h3>' + mnChip(f.estado) + '</div>' +
+    '<div class="mnBig">' + f.sesiones + ' <small>de ' + f.metaSesiones + ' sesiones · ' + f.min + ' de ' + f.metaMin + ' min</small></div>' + mnBarra(f.min, f.metaMin) + '</div>';
+  h += '<div class="card"><div class="mnHead"><h3 style="margin:0">Aeróbico</h3>' + mnChip(a.estado) + '</div>' +
+    '<div class="mnBig">' + a.min + ' <small>de ' + a.meta + ' min</small></div>' + mnBarra(a.min, a.meta) +
+    '<p class="hint">' + (porDep || 'Sin sesiones esta semana.') + (a.sinDuracion ? ' · ' + a.sinDuracion + ' sesión(es) sin duración registrada' : '') + '</p></div>';
+  if (p.estado === 'sin') {
+    h += '<div class="card"><div class="mnHead"><h3 style="margin:0">Proteína</h3>' + mnChip('sin') + '</div><p class="hint">' +
+      (p.metaG ? 'No hay días con proteína cargada en Nutrición esta semana.' : 'Falta el peso: cargalo en Perfil (Datos) o en Metas.') + '</p></div>';
+  } else {
+    h += '<div class="card"><div class="mnHead"><h3 style="margin:0">Proteína</h3>' + mnChip(p.estado) + '</div>' +
+      '<div class="mnBig">' + p.diasCumplidos + ' <small>de ' + p.metaDias + ' días llegando a ' + p.metaG + ' g</small></div>' + mnBarra(p.diasCumplidos, p.metaDias) +
+      '<p class="hint">' + p.diasConDato + ' día(s) con datos cargados</p></div>';
+  }
+  let calTxt;
+  if (c.superavitPromedio === null) calTxt = 'Sin días completos con consumo y gasto cargados.';
+  else if (c.superavitPromedio > 0) calTxt = 'Comiste en promedio ' + c.superavitPromedio + ' kcal por día por encima de lo que gastaste.';
+  else if (c.superavitPromedio < 0) calTxt = 'Comiste en promedio ' + (-c.superavitPromedio) + ' kcal por día por debajo de lo que gastaste.';
+  else calTxt = 'Comida y gasto, parejos.';
+  h += '<div class="card"><div class="mnHead"><h3 style="margin:0">Calorías</h3><span class="mnChip mn-sin">solo informativo</span></div><p style="color:var(--text)">' + calTxt + '</p>' +
+    '<p class="hint">' + c.dias + ' día(s) contados' + (r.enCurso ? ' (hoy no se cuenta hasta que termine)' : '') + '. Sale de Nutrición.</p></div>';
+  document.getElementById('mnPilares').innerHTML = h;
+
+  // Sueño: 7 casilleros, uno por día de la semana
+  document.getElementById('mnChipSueno').innerHTML = mnChip(r.sueno.estado);
+  const sueno = leerJsonLS(LS_MN_SUENO, {});
+  let sh = '<div class="mnSueno">';
+  r.dias.forEach((d, i) => {
+    sh += '<div><label for="mnSn' + i + '">' + MN_DIAS_CORTO[i] + '</label><input id="mnSn' + i + '" type="number" inputmode="decimal" step="0.5" min="0" max="16" data-dia="' + d + '" value="' + (sueno[d] || '') + '"' + (d > hoy ? ' disabled' : '') + '></div>';
+  });
+  sh += '</div><p class="hint">' + (r.sueno.promedio !== null ? 'Promedio ' + fmtN(r.sueno.promedio, 1) + ' h en ' + r.sueno.noches + ' noche(s) · meta ' + r.sueno.meta + ' h' : 'Meta ' + r.sueno.meta + ' h por noche') + '</p>';
+  document.getElementById('mnSueno').innerHTML = sh;
+  document.querySelectorAll('#mnSueno input').forEach((inp) => {
+    inp.addEventListener('change', () => {
+      const s = leerJsonLS(LS_MN_SUENO, {});
+      const v = parseFloat(String(inp.value).replace(',', '.'));
+      if (isFinite(v) && v > 0 && v <= 16) s[inp.getAttribute('data-dia')] = v; else delete s[inp.getAttribute('data-dia')];
+      if (mnEscribir(LS_MN_SUENO, s)) renderMinimos();
+    });
+  });
+
+  // Historial: 8 semanas terminando en la que se está viendo
+  const semanas = [];
+  for (let i = 7; i >= 0; i--) semanas.push(mnResumenSemana(ses, sumarDiasISO(inicio, -7 * i), datos, cfg, hoy));
+  let th = '<table class="mnHist"><tr><th></th>' + semanas.map((w) => '<th>' + fechaCorta(w.inicio).replace('/', '/<br>') + '</th>').join('') + '</tr>';
+  [['Fuerza', 'fuerza'], ['Aeróbico', 'aerobico'], ['Proteína', 'proteina']].forEach((fila) => {
+    th += '<tr><td>' + fila[0] + '</td>' + semanas.map((w) => {
+      const e = w.futura ? 'sin' : w[fila[1]].estado;
+      return '<td class="c mn-' + e + '">' + MN_SIMB[e] + '</td>';
+    }).join('') + '</tr>';
+  });
+  document.getElementById('mnHist').innerHTML = th + '</table>';
+
+  // Metas
+  const g = leerJsonLS(LS_MN_CFG, {});
+  const campos = [
+    ['fuerzaSesiones', 'Fuerza: sesiones por semana', cfg.fuerzaSesiones],
+    ['fuerzaMin', 'Fuerza: minutos por semana', cfg.fuerzaMin],
+    ['aerobicoMin', 'Aeróbico: minutos por semana', cfg.aerobicoMin],
+    ['proteinaGkg', 'Proteína: g por kg', cfg.proteinaGkg],
+    ['proteinaDias', 'Proteína: días por semana', cfg.proteinaDias],
+    ['suenoHoras', 'Sueño: horas por noche', cfg.suenoHoras],
+  ];
+  let ch = campos.map((k) => '<label for="mnCf_' + k[0] + '">' + k[1] + '</label><input id="mnCf_' + k[0] + '" data-k="' + k[0] + '" type="number" inputmode="decimal" step="any" min="0" value="' + k[2] + '">').join('');
+  if (cfg.pesoOrigen === 'manual' || cfg.pesoOrigen === null) {
+    ch += '<label for="mnCf_pesoKg">Peso (kg)</label><input id="mnCf_pesoKg" data-k="pesoKg" type="number" inputmode="decimal" step="0.1" min="0" value="' + (g.pesoKg || '') + '">';
+  } else {
+    ch += '<span>Peso</span><span>' + cfg.pesoKg + ' kg</span>';
+  }
+  document.getElementById('mnCfg').innerHTML = ch;
+  document.querySelectorAll('#mnCfg input').forEach((inp) => {
+    inp.addEventListener('change', () => {
+      const gg = leerJsonLS(LS_MN_CFG, {});
+      const v = parseFloat(String(inp.value).replace(',', '.'));
+      if (isFinite(v) && v > 0) gg[inp.getAttribute('data-k')] = v; else delete gg[inp.getAttribute('data-k')];
+      if (mnEscribir(LS_MN_CFG, gg)) renderMinimos();
+    });
+  });
+
+  // Fuentes: cuántas sesiones leyó de cada deporte
+  const dr = {}; r.dias.forEach((d) => { dr[d] = true; });
+  const porDeporte = {};
+  ses.forEach((s) => { const x = porDeporte[s.deporte] || (porDeporte[s.deporte] = { total: 0, semana: 0 }); x.total++; if (dr[s.clave]) x.semana++; });
+  const claves = Object.keys(porDeporte).sort();
+  document.getElementById('mnFuentes').innerHTML = claves.length
+    ? '<table><tr><th>Deporte</th><th>Total</th><th>Esta semana</th></tr>' + claves.map((k) => '<tr><td>' + mnNombreDeporte(k) + '</td><td>' + porDeporte[k].total + '</td><td>' + porDeporte[k].semana + '</td></tr>').join('') + '</table>'
+    : '<p class="hint">Ninguna sesión encontrada.</p>';
+}
+
+document.getElementById('mnPrev').addEventListener('click', () => { if (mnOffset > -52) { mnOffset--; renderMinimos(); } });
+document.getElementById('mnNext').addEventListener('click', () => { if (mnOffset < 0) { mnOffset++; renderMinimos(); } });
 
 /* ========================= INIT ========================= */
 
