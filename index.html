@@ -329,6 +329,24 @@
   .mnHist th:first-child,.mnHist td:first-child{text-align:left;}
   .mnHist td.c{font-weight:700;border-radius:6px;border-bottom:none;}
   .mnAviso{display:none;background:rgba(217,112,90,.16);color:var(--warn);border-radius:10px;padding:10px;margin-bottom:12px;font-size:0.82rem;}
+  /* asistente de entrenamiento */
+  .asOpt{display:block;width:100%;text-align:left;padding:12px 14px;margin:0 0 8px;border-radius:12px;border:1px solid var(--line);background:var(--bg-panel-2);color:inherit;font:inherit;cursor:pointer}
+  .asOpt b{display:block;font-size:1rem}
+  .asOpt span{display:block;font-size:.8rem;color:var(--text-dim);margin-top:2px}
+  .asOpt.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+  .asFases{display:flex;gap:4px;margin:4px 0 6px;overflow-x:auto}
+  .asFase{min-width:72px;flex-basis:0;background:var(--bg-panel-2);border:1px solid var(--line);border-radius:8px;padding:6px;font-size:.75rem;overflow:hidden}
+  .asFase b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .asFase span{color:var(--text-dim)}
+  .asFase.ahora{border-color:var(--accent)}
+  .asSes{font-size:.85rem;padding:5px 0;border-bottom:1px solid var(--line)}
+  .asSesHoy{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg-panel-2)}
+  .asSesHoy .t{font-size:1rem;margin-bottom:4px}
+  .asSesHoy ul,.asUl{margin:4px 0 6px 18px;padding:0}
+  .asSesHoy li,.asUl li{margin:3px 0;font-size:.88rem}
+  .asSem{border-bottom:1px solid var(--line);padding:4px 0}
+  .asSem summary{cursor:pointer;font-size:.85rem}
+  .asSem.ahora summary{font-weight:700;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -386,13 +404,15 @@
         <div class="hint" id="fueraDeRangoHint" style="display:none;color:var(--warn)">Esta fecha está fuera del rango del ciclo activo.</div>
       </div>
 
+      <div class="card" id="asisHoyCard" style="display:none"></div>
+
       <div class="card">
         <h3>Disciplinas de hoy</h3>
         <p style="margin-bottom:8px">Tocá para marcar qué vas a entrenar hoy. El tiempo ya está ajustado por el %carga de la semana.</p>
         <div id="discList"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="cardSeriesSugeridas">
         <h3>Sesiones de series sugeridas</h3>
         <p style="margin-bottom:8px">Series × trabajo / descanso, con el volumen y la carga de esta semana.</p>
         <div class="zoneBar" id="zoneBar"></div>
@@ -453,11 +473,19 @@
 
   <!-- CICLO -->
   <section class="panel" id="panel-ciclo">
+    <!-- asistente de entrenamiento: para quien no es entrenador -->
+    <div class="card">
+      <h3>🧭 Asistente de entrenamiento</h3>
+      <p class="hint" style="margin:4px 0 10px">Contestá unas preguntas (objetivo, fecha, experiencia, horas y días) y el asistente arma las fases, las semanas y cada sesión, con las zonas calculadas para vos.</p>
+      <button class="primary" style="width:100%" id="btnAsistente">Armar mi plan con el asistente</button>
+    </div>
+    <div class="card" id="asisWiz" style="display:none"><div id="asisWizCuerpo"></div></div>
+    <div class="card" id="asisResumen" style="display:none"></div>
     <div class="card">
       <h3>Ciclos guardados</h3>
       <div id="listaCiclos"></div>
       <div class="btnRow">
-        <button class="primary" id="btnNuevoCiclo">+ Nuevo ciclo</button>
+        <button id="btnNuevoCiclo">🛠️ Modo entrenador: ciclo a mano</button>
       </div>
     </div>
 
@@ -1052,8 +1080,425 @@ function calcularDia(config, fechaISO) {
     };
   }
 
-  return { fueraDeRango, diaIndex, semanaIndex: semanaIndex + 1, curva, pctCarga, horasSemana: horasSemanaConTaper, enTaper: factorTaper < 1, disciplinas, zonas };
+  const res = { fueraDeRango, diaIndex, semanaIndex: semanaIndex + 1, curva, pctCarga, horasSemana: horasSemanaConTaper, enTaper: factorTaper < 1, disciplinas, zonas };
+  // ciclo armado con el asistente: horas y sesiones de la semana real del plan
+  if (config.asistente && !fueraDeRango) { try { asisAjustarDia(config, fechaISO, res); } catch (e) { console.error(e); } }
+  return res;
 }
+
+/*ASIS-INI*/
+/* ============================================================
+   ASISTENTE DE ENTRENAMIENTO (Hugo, 19-nov: "un asistente que simplifique la generación de ciclos,
+   microciclos y sesiones, para mis parientes y amigos triatletas que no tienen los conocimientos de un
+   entrenador"). Decisiones de Hugo: el asistente elige solo el modelo y las fases (y dice por qué), las
+   sesiones salen completas (entrada en calor, bloque principal con series y zona calculada del umbral,
+   vuelta a la calma) y el formulario de siempre queda como "modo entrenador".
+
+   Todo lo de este bloque es lógica pura (sin DOM), así se prueba con Node:
+     asisPlan(perfil, ctx)            → fases y semanas (microciclos) del ciclo
+     asisSesionesSemana(plan, w, ctx) → las sesiones de una semana, con día, deporte, tipo y minutos
+     asisSesionesDia(plan, iso, ctx)  → las de un día, con sus bloques armados
+     asisBloques(s, ctx)              → entrada en calor / principal / vuelta a la calma de una sesión
+     asisZonaTxt(dep, z, ctx)         → "Z2 · 128–136 lpm · 5:40–6:10/km · RPE 3–4"
+   perfil = { objetivo, eventoFecha, eventoNombre, nivel, horas, dias:[0..6], diaLargo, deportes:[], inicio }
+   ctx    = { u: entrenamiento_umbrales, edad }
+   Las sesiones NO se guardan: se calculan cada vez desde el perfil, así si cambia el umbral las zonas se
+   actualizan solas. En el ciclo se guarda { asistente: { v:1, perfil } } más los campos de siempre.
+   Reglas de entrenador (orientativas, como dice la app): fases base → construcción → específico →
+   afinación; carga/descarga 3:1 (2:1 si está empezando o tiene 50 años o más); intensidad 80/20;
+   zonas de pulso iguales a las de Correr, Bici y Kayak (% del pulso de umbral).
+   ============================================================ */
+const ASIS_OBJETIVOS = {
+  sprint:   { txt: 'Triatlón sprint', det: '750 m · 20 km · 5 km', tri: true, dep: ['natacion', 'bici', 'carrera'], horas: [4, 7], afin: 1, esp: 4, largo: { bici: 90, carrera: 60 } },
+  olimpico: { txt: 'Triatlón olímpico', det: '1,5 km · 40 km · 10 km', tri: true, dep: ['natacion', 'bici', 'carrera'], horas: [6, 10], afin: 1, esp: 4, largo: { bici: 150, carrera: 80 } },
+  medio:    { txt: 'Medio Ironman (70.3)', det: '1,9 km · 90 km · 21,1 km', tri: true, largaDist: true, dep: ['natacion', 'bici', 'carrera'], horas: [8, 13], afin: 2, esp: 3, largo: { bici: 240, carrera: 120 } },
+  ironman:  { txt: 'Ironman', det: '3,8 km · 180 km · 42,2 km', tri: true, largaDist: true, dep: ['natacion', 'bici', 'carrera'], horas: [10, 18], afin: 2, esp: 2, largo: { bici: 330, carrera: 150 } },
+  c10:      { txt: 'Carrera de 10 km', det: 'a pie', dep: ['carrera', 'fuerza'], horas: [3, 6], afin: 1, esp: 4, largo: { carrera: 80 } },
+  c21:      { txt: 'Media maratón', det: '21,1 km a pie', largaDist: true, dep: ['carrera', 'fuerza'], horas: [4, 8], afin: 2, esp: 3, largo: { carrera: 120 } },
+  base:     { txt: 'Sin carrera: ponerme en forma', det: '12 semanas de base', dep: ['natacion', 'bici', 'carrera'], horas: [3, 8], afin: 0, esp: 2, largo: { bici: 120, carrera: 75, kayak: 120 } },
+};
+const ASIS_NIVELES = {
+  inicio: { txt: 'Estoy empezando', det: 'menos de un año entrenando, o vuelvo después de mucho tiempo' },
+  medio: { txt: 'Intermedio', det: 'entreno hace uno a tres años y ya terminé alguna carrera' },
+  avanzado: { txt: 'Con experiencia', det: 'más de tres años, compito seguido' },
+};
+const ASIS_DEP = { natacion: '🏊 Natación', bici: '🚴 Bici', carrera: '🏃 Carrera', kayak: '🛶 Kayak', fuerza: '🏋️ Fuerza' };
+const ASIS_REPARTO = { natacion: 22, bici: 45, carrera: 33, kayak: 25 };   // % del tiempo de resistencia (se normaliza con los elegidos)
+const ASIS_CAL_MAX = { natacion: 60, bici: 90, carrera: 60, kayak: 75 };   // tope de una sesión de calidad (min)
+const ASIS_MIN = { natacion: 30, bici: 35, carrera: 25, kayak: 30, fuerza: 30 };
+const ASIS_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+// zonas de pulso: % del pulso de umbral, mismas que Correr, Bici y Kayak (Z1 <85, Z2 85–89, Z3 90–94, Z4 95–99, Z5 ≥100)
+const ASIS_ZP = { 1: [0.72, 0.84], 2: [0.85, 0.89], 3: [0.90, 0.94], 4: [0.95, 0.99], 5: [1.00, 1.05] };
+const ASIS_ZRITMO = { 1: [1.30, 1.45], 2: [1.15, 1.29], 3: [1.06, 1.14], 4: [0.99, 1.05], 5: [0.92, 0.98] };   // × ritmo de umbral (s/km)
+const ASIS_ZFTP = { 1: [0.45, 0.55], 2: [0.56, 0.75], 3: [0.76, 0.90], 4: [0.91, 1.05], 5: [1.06, 1.20] };    // × FTP (Coggan)
+const ASIS_RPE = { 1: '2–3, muy suave', 2: '3–4, cómodo: podés charlar', 3: '5–6, moderado: frases cortas', 4: '7–8, fuerte sostenido', 5: '9, muy fuerte' };
+
+function asisUTC(iso) { const p = String(iso).slice(0, 10).split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); }
+function asisISO(ms) { const d = new Date(ms); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0') + '-' + String(d.getUTCDate()).padStart(2, '0'); }
+function asisSumar(iso, n) { return asisISO(asisUTC(iso) + n * 86400000); }
+function asisEntre(a, b) { return Math.round((asisUTC(b) - asisUTC(a)) / 86400000); }
+function asisDow(iso) { return new Date(asisUTC(iso)).getUTCDay(); }
+function asisR5(m) { return Math.max(5, Math.round(m / 5) * 5); }
+function asisMmss(s) { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+// ¿Qué tiene que revisar la persona antes de crear el plan? (vacío = está todo bien)
+function asisValidar(p) {
+  const e = [];
+  if (!ASIS_OBJETIVOS[p.objetivo]) e.push('Elegí un objetivo.');
+  if (!ASIS_NIVELES[p.nivel]) e.push('Elegí tu nivel.');
+  if (!p.deportes || !p.deportes.filter((d) => d !== 'fuerza').length) e.push('Elegí al menos un deporte de resistencia.');
+  if (!(p.horas >= 2)) e.push('Necesitás al menos 2 horas por semana.');
+  if (!p.dias || p.dias.length < 2) e.push('Elegí al menos 2 días para entrenar.');
+  if (ASIS_OBJETIVOS[p.objetivo] && ASIS_OBJETIVOS[p.objetivo].afin) {
+    if (!p.eventoFecha) e.push('Poné la fecha de la carrera.');
+    else if (asisEntre(p.inicio, p.eventoFecha) < 13) e.push('La carrera tiene que estar al menos a 2 semanas.');
+  }
+  return e;
+}
+
+function asisPlan(p, ctx) {
+  const O = ASIS_OBJETIVOS[p.objetivo] || ASIS_OBJETIVOS.base;
+  const edad = ctx && ctx.edad;
+  const conEvento = !!O.afin && !!p.eventoFecha;
+  const totalDias = conEvento ? asisEntre(p.inicio, p.eventoFecha) + 1 : 84;
+  const n = Math.ceil(totalDias / 7);
+  // el asistente decide el modelo: carrera larga y no principiante → inversa (lo específico es el volumen,
+  // que se deja para el final); carrera corta o principiante → lineal (primero base, después intensidad)
+  const modelo = conEvento && O.largaDist && p.nivel !== 'inicio' ? 'inversa' : 'tradicional';
+  const ciclo = p.nivel === 'inicio' || (edad && edad >= 50) ? 2 : 3;
+  const afinSem = conEvento ? Math.min(O.afin, n) : 0;
+  const resto = n - afinSem;
+  let esp = 0, cons = 0, base = 0;
+  if (!conEvento) { base = Math.ceil(n / 2); cons = n - base; }
+  else {
+    esp = resto >= 6 ? Math.max(2, Math.round(resto * 0.25)) : (resto >= 3 ? 1 : 0);
+    cons = Math.round((resto - esp) * 0.45);
+    base = resto - esp - cons;
+  }
+  const nombres = modelo === 'inversa' ? ['Intensidad', 'Volumen', 'Específico', 'Afinación'] : ['Base', 'Construcción', 'Específico', 'Afinación'];
+  const fasesN = [[nombres[0], base], [nombres[1], cons], [nombres[2], esp], [nombres[3], afinSem]].filter((f) => f[1] > 0);
+  const FOCO = {
+    Base: 'resistencia aeróbica y técnica, casi todo suave',
+    Construcción: 'se suma trabajo de umbral una vez por semana en cada deporte',
+    Específico: 'se practica el ritmo y las condiciones de la carrera',
+    Afinación: 'baja el volumen y se mantiene la chispa para llegar fresco',
+    Intensidad: 'poco volumen y series cortas e intensas',
+    Volumen: 'sube el volumen y la intensidad baja hacia ritmos más largos',
+  };
+  const fases = []; let k = 0;
+  fasesN.forEach(([nombre, sem]) => { fases.push({ nombre, semanas: sem, desde: asisSumar(p.inicio, k * 7), foco: FOCO[nombre] }); k += sem; });
+  // semanas: carga / descarga y factor de volumen sobre las horas disponibles
+  const semanas = [];
+  let iFase = 0, enFase = 0, kNoAfin = 0;
+  const nNoAfin = n - afinSem;
+  const inicioF = p.nivel === 'inicio' ? 0.6 : 0.7;
+  const cargas = [];
+  for (let i = 0; i < nNoAfin; i++) {
+    const desc = (i + 1) % (ciclo + 1) === 0 && i < nNoAfin - 1;
+    cargas.push(!desc);
+  }
+  const nCargas = cargas.filter(Boolean).length;
+  let jCarga = 0, fPrev = inicioF;
+  for (let i = 0; i < n; i++) {
+    while (iFase < fases.length && enFase >= fases[iFase].semanas) { iFase++; enFase = 0; }
+    const F = fases[Math.min(iFase, fases.length - 1)];
+    enFase++;
+    const desde = asisSumar(p.inicio, i * 7);
+    let hasta = asisSumar(desde, 6);
+    if (conEvento && hasta > p.eventoFecha) hasta = p.eventoFecha;
+    let tipo, factor;
+    if (i < nNoAfin) {
+      if (cargas[i]) { factor = nCargas > 1 ? inicioF + (1 - inicioF) * jCarga / (nCargas - 1) : 1; jCarga++; fPrev = factor; tipo = 'carga'; }
+      else { factor = fPrev * 0.6; tipo = 'descarga'; }
+    } else {
+      const ia = i - nNoAfin;
+      factor = afinSem === 2 ? [0.7, 0.5][ia] : 0.5;
+      tipo = i === n - 1 && conEvento ? 'evento' : 'afinacion';
+    }
+    const horas = Math.max(1, Math.round(p.horas * factor * 4) / 4);
+    semanas.push({ n: i + 1, desde, hasta, fase: F.nombre, semEnFase: enFase, totEnFase: F.semanas, tipo, factor, horas, prog: F.semanas > 1 ? (enFase - 1) / (F.semanas - 1) : 0.5 });
+  }
+  const porque = [];
+  if (!conEvento) porque.push('Sin carrera: 12 semanas para construir una base aeróbica sólida (primero suave y técnica, después algo de umbral). Al terminar, el asistente arma el siguiente bloque.');
+  else if (modelo === 'inversa') porque.push('Para una carrera larga lo más específico es el volumen: arrancás con poco volumen y series intensas, y a medida que se acerca la fecha el volumen sube y la intensidad baja (periodización inversa).');
+  else if (p.nivel === 'inicio') porque.push('Estás empezando: primero se construyen la base aeróbica y la técnica, y la intensidad llega de a poco, más adelante (periodización lineal).');
+  else porque.push('Para una carrera corta lo más específico es la intensidad: primero volumen suave, y cerca de la fecha más trabajo a ritmo de carrera (periodización lineal).');
+  porque.push(ciclo === 2
+    ? 'Semanas de carga y descarga 2:1 (dos de carga, una más liviana): ' + (p.nivel === 'inicio' ? 'al empezar, el cuerpo necesita más tiempo para asimilar.' : 'a partir de los 50 años la recuperación pide más tiempo.')
+    : 'Semanas de carga y descarga 3:1: tres semanas subiendo y una más liviana para asimilar.');
+  porque.push('El 80 % del tiempo es suave (Z1–Z2) y el 20 % de calidad: así mejora la resistencia sin acumular cansancio.');
+  if (afinSem) porque.push('Las últimas ' + (afinSem === 2 ? 'dos semanas' : 'semana') + ' baja el volumen para llegar descansado a la carrera (afinación).');
+  return { v: 1, p, O, modelo, ciclo, totalDias, n, fases, semanas, porque, conEvento, cache: {} };
+}
+
+function asisSemanaDe(plan, iso) {
+  if (iso < plan.p.inicio) return null;
+  const i = Math.floor(asisEntre(plan.p.inicio, iso) / 7);
+  const w = plan.semanas[i];
+  return w && iso <= w.hasta ? w : null;
+}
+
+function asisTipoCalidad(plan, w, dep) {
+  const F = w.fase, niv = plan.p.nivel;
+  if (w.tipo === 'descarga') return 'tecnica';
+  if (w.tipo === 'afinacion' || w.tipo === 'evento') return 'activacion';
+  if (F === 'Base') return 'tecnica';
+  if (F === 'Construcción') return niv === 'inicio' && w.prog < 0.5 ? 'tempo' : 'umbral';
+  if (F === 'Intensidad') return niv === 'avanzado' && dep !== 'natacion' ? 'vo2' : 'umbral';
+  if (F === 'Volumen') return 'tempo';
+  if (F === 'Específico') return 'ritmo';
+  return 'suave';
+}
+
+// Las sesiones de una semana (microciclo): cuántas de cada deporte, cuántos minutos, qué día y de qué tipo.
+function asisSesionesSemana(plan, w, ctx) {
+  if (plan.cache[w.n]) return plan.cache[w.n];
+  const p = plan.p, O = plan.O, H = w.horas;
+  const deps = (p.deportes || []).filter((d) => ASIS_DEP[d]);
+  const res = deps.filter((d) => d !== 'fuerza');
+  // cantidad de sesiones por deporte
+  const cant = {};
+  res.forEach((d) => {
+    let c = 2;
+    if (d === 'natacion' && H >= 9 && p.nivel !== 'inicio') c = 3;
+    if (d === 'bici' && H >= 10) c = 3;
+    if (d === 'carrera') c = res.length === 1 ? Math.min(p.nivel === 'inicio' ? 3 : 5, 3 + (H >= 5) + (H >= 7)) : (H >= 7 && p.nivel !== 'inicio' ? 3 : 2);
+    if (d === 'kayak') c = res.length === 1 ? 3 : (H >= 10 ? 2 : 1);
+    cant[d] = c;
+  });
+  const eventoSem = w.tipo === 'evento';
+  if (deps.includes('fuerza')) cant.fuerza = eventoSem ? 0 : (w.tipo === 'afinacion' ? 1 : ((w.fase === 'Base' || w.fase === 'Intensidad' || p.nivel === 'inicio') ? 2 : 1));
+  // no más sesiones de las que entran en los días elegidos (como mucho una doble cada dos días)
+  const tope = p.dias.length + Math.floor(p.dias.length / 2);
+  const totalRes = () => res.reduce((a, d) => a + cant[d], 0);
+  while (totalRes() > tope) { const d = res.slice().sort((a, b) => cant[b] - cant[a])[0]; if (cant[d] <= 1) break; cant[d]--; }
+  // minutos: la fuerza va aparte, el resto se reparte por deporte
+  const minF = H >= 8 ? 40 : 30;
+  const minRes = Math.max(30, H * 60 - (cant.fuerza || 0) * minF);
+  const tot = res.reduce((a, d) => a + ASIS_REPARTO[d], 0) || 1;
+  const lista = [];
+  const largoDia = p.dias.includes(p.diaLargo) ? p.diaLargo : p.dias[p.dias.length - 1];
+  const sigDia = (d) => { for (let k = 1; k <= 7; k++) { const x = (d + k) % 7; if (p.dias.includes(x)) return x; } return d; };
+  const conLarga = (d) => (d === 'bici' || d === 'carrera' || (d === 'kayak' && res.length === 1)) && cant[d] >= 2 && w.tipo !== 'evento';
+  res.forEach((d) => {
+    const m = minRes * ASIS_REPARTO[d] / tot;
+    let resto = m, nRes = cant[d];
+    if (conLarga(d)) {
+      const share = w.fase === 'Intensidad' ? 0.3 : (O.largaDist ? (d === 'bici' ? 0.6 : 0.5) : (d === 'bici' ? 0.42 : 0.36));   // en distancias largas, la larga es la mitad del deporte
+      const tope2 = O.largo[d] || 120;
+      // la larga es siempre la más larga de la semana de ese deporte (con dos sesiones, ~2/3 del tiempo)
+      const ml = Math.min(tope2 * (w.tipo === 'carga' ? 1 : 0.7), Math.max(ASIS_MIN[d] * 1.5, m * share, (m / cant[d]) * 1.35));
+      // la larga de bici va en el día largo; la de carrera, al día siguiente (o en el día largo si no hay bici)
+      const dia = d === 'carrera' && cant.bici >= 2 ? sigDia(largoDia) : largoDia;
+      lista.push({ dep: d, tipo: 'larga', min: asisR5(ml), dia, larga: true });
+      resto -= ml; nRes--;
+    }
+    const mins = []; for (let j = 0; j < nRes; j++) mins.push(Math.max(ASIS_MIN[d], resto / nRes));
+    const tipos = mins.map((_, j) => (j === 0 ? asisTipoCalidad(plan, w, d) : (d === 'natacion' && j === 1 && w.fase === 'Base' ? 'tecnica' : 'suave')));
+    // una sesión de calidad no se estira: lo que sobra pasa a las suaves (o a la larga)
+    if (nRes && /umbral|vo2|ritmo|tempo/.test(tipos[0]) && mins[0] > ASIS_CAL_MAX[d]) {
+      const sobra = mins[0] - ASIS_CAL_MAX[d]; mins[0] = ASIS_CAL_MAX[d];
+      if (nRes > 1) for (let j = 1; j < nRes; j++) mins[j] += sobra / (nRes - 1);
+      else { const l = lista.find((x) => x.dep === d && x.larga); if (l) l.min = asisR5(Math.min((O.largo[d] || 120), l.min + sobra)); }
+    }
+    for (let j = 0; j < nRes; j++) lista.push({ dep: d, tipo: tipos[j], min: asisR5(mins[j]) });
+  });
+  for (let j = 0; j < (cant.fuerza || 0); j++) lista.push({ dep: 'fuerza', tipo: 'fuerza', min: minF });
+  // transición (correr apenas se baja de la bici) en el día largo, en las fases cercanas a la carrera
+  if (O.tri && res.includes('bici') && res.includes('carrera') && w.tipo === 'carga' && /Construcción|Específico|Volumen/.test(w.fase)) {
+    lista.push({ dep: 'carrera', tipo: 'transicion', min: w.fase === 'Específico' ? 20 : 10, dia: largoDia, extra: true });
+  }
+  // días: las largas ya tienen día; el resto va al día con menos carga, evitando el mismo deporte en días
+  // seguidos y la calidad el día antes del largo
+  const carga = {}; p.dias.forEach((d) => { carga[d] = []; });
+  lista.filter((s) => s.dia != null).forEach((s) => { if (!carga[s.dia]) carga[s.dia] = []; carga[s.dia].push(s); });
+  const calidad = (t) => /umbral|vo2|ritmo|tempo/.test(t);
+  const pendientes = lista.filter((s) => s.dia == null).sort((a, b) => (calidad(b.tipo) - calidad(a.tipo)) || (a.dep === 'fuerza') - (b.dep === 'fuerza'));
+  pendientes.forEach((s) => {
+    let mejor = null, mejorP = Infinity;
+    p.dias.forEach((d) => {
+      const hoy = carga[d], ant = carga[(d + 6) % 7] || [], sig = carga[(d + 1) % 7] || [];
+      const resHoy = hoy.filter((x) => x.dep !== 'fuerza' && !x.extra).length;
+      let pen = 10 * resHoy + (s.dep === 'fuerza' ? 2 * hoy.filter((x) => x.dep === 'fuerza').length * 10 : 0);
+      if (hoy.some((x) => x.dep === s.dep)) pen += 30;
+      if (ant.some((x) => x.dep === s.dep) || sig.some((x) => x.dep === s.dep)) pen += 4;
+      if (calidad(s.tipo) && (d === (largoDia + 6) % 7 || d === largoDia)) pen += 12;
+      if (calidad(s.tipo) && hoy.some((x) => calidad(x.tipo))) pen += 15;
+      if (s.dep === 'fuerza' && (d === largoDia || hoy.some((x) => calidad(x.tipo)))) pen += 6;
+      if (p.nivel === 'inicio' && resHoy && s.dep !== 'fuerza') pen += 20;
+      if (pen < mejorP) { mejorP = pen; mejor = d; }
+    });
+    s.dia = mejor; carga[mejor].push(s);
+  });
+  // fechas reales dentro de la semana; en la semana de la carrera: el día antes, solo activación; la carrera, ese día
+  const out = [];
+  for (let iso = w.desde; iso <= w.hasta; iso = asisSumar(iso, 1)) {
+    const dow = asisDow(iso);
+    (carga[dow] || []).forEach((s) => out.push(Object.assign({}, s, { fecha: iso })));
+  }
+  if (eventoSem) {
+    const ev = p.eventoFecha;
+    const quedan = out.filter((s) => s.fecha < asisSumar(ev, -1));
+    const fin = quedan.concat([{ dep: res.includes('carrera') ? 'carrera' : res[0], tipo: 'activacion', min: 20, fecha: asisSumar(ev, -1) },
+      { dep: O.tri ? 'tri' : (res.includes('carrera') ? 'carrera' : res[0]), tipo: 'evento', min: 0, fecha: ev }]).filter((s) => s.fecha >= w.desde);
+    out.length = 0; fin.forEach((s) => out.push(s));
+  }
+  // test de umbral en la primera semana, si falta (no para quien está empezando)
+  const u = (ctx && ctx.u) || {};
+  if (w.n === 1 && p.nivel !== 'inicio' && w.tipo === 'carga') {
+    [['carrera', u.pulsoUmbralCarrera], ['bici', u.pulsoUmbralBici || u.ftpBici]].forEach(([d, tiene]) => {
+      if (tiene) return;
+      const s = out.find((x) => x.dep === d && !x.larga && x.tipo !== 'transicion');
+      if (s) { s.tipo = 'test'; s.min = 55; }
+    });
+  }
+  out.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0) || (a.extra ? 1 : 0) - (b.extra ? 1 : 0));
+  plan.cache[w.n] = out;
+  return out;
+}
+
+// Texto de una zona para un deporte, con lo que haya: pulso (del umbral o estimado por la edad), ritmo, potencia y RPE.
+function asisZonaTxt(dep, z, ctx) {
+  const u = (ctx && ctx.u) || {}, edad = ctx && ctx.edad;
+  const partes = ['Z' + z];
+  let pu = dep === 'carrera' ? u.pulsoUmbralCarrera : dep === 'bici' ? u.pulsoUmbralBici : dep === 'kayak' ? u.pulsoUmbralKayak : null;
+  let est = false;
+  if (!pu && edad && dep !== 'natacion' && dep !== 'fuerza') { pu = (208 - 0.7 * edad) * (dep === 'bici' ? 0.87 : 0.9); est = true; }   // Tanaka; umbral ≈ 90 % (87 % en bici)
+  if (pu) { const r = ASIS_ZP[z]; partes.push((est ? '≈' : '') + Math.round(pu * r[0]) + '–' + Math.round(pu * r[1]) + ' lpm'); }
+  if (dep === 'carrera' && u.ritmoUmbralCarreraSegKm) { const r = ASIS_ZRITMO[z]; partes.push(asisMmss(u.ritmoUmbralCarreraSegKm * r[0]) + '–' + asisMmss(u.ritmoUmbralCarreraSegKm * r[1]) + '/km'); }
+  if (dep === 'bici' && u.ftpBici) { const r = ASIS_ZFTP[z]; partes.push(Math.round(u.ftpBici * r[0]) + '–' + Math.round(u.ftpBici * r[1]) + ' W'); }
+  partes.push('RPE ' + ASIS_RPE[z]);
+  return partes.join(' · ');
+}
+
+const ASIS_TITULO = { suave: 'Suave', larga: 'Fondo largo', tecnica: 'Técnica', tempo: 'Ritmo sostenido', umbral: 'Umbral', vo2: 'Series cortas (VO2 máx)',
+  ritmo: 'Ritmo de carrera', activacion: 'Activación', transicion: 'Transición', test: 'Test de umbral', fuerza: 'Fuerza general', evento: 'Día de la carrera', regenerativa: 'Regenerativa' };
+const ASIS_RAZON = { suave: 'suma volumen sin acumular cansancio', larga: 'construye la resistencia de base', tecnica: 'mejora la eficiencia sin cansar',
+  tempo: 'acostumbra al cuerpo a sostener esfuerzos largos', umbral: 'sube el ritmo que podés sostener', vo2: 'eleva el techo aeróbico',
+  ritmo: 'practicás el ritmo de la carrera', activacion: 'mantiene la chispa con poco cansancio', transicion: 'acostumbra las piernas a correr después de la bici',
+  test: 'mide tu umbral para que las zonas de todo el plan sean tuyas', fuerza: 'protege las articulaciones y mejora la economía', evento: 'es el día', regenerativa: 'ayuda a recuperar' };
+
+function asisBloques(s, ctx) {
+  const Z = (n) => asisZonaTxt(s.dep === 'tri' ? 'bici' : s.dep, n, ctx);
+  const prog = s.prog || 0, esp = s.esp || 3, min = s.min;
+  const cal = s.dep === 'natacion' ? 10 : Math.min(15, Math.max(10, asisR5(min * 0.18)));
+  const vc = min >= 45 ? 10 : 5;
+  const P = Math.max(5, min - cal - vc);
+  const ec = 'Entrada en calor: ' + cal + ' min ' + Z(1);
+  const vcT = 'Vuelta a la calma: ' + vc + ' min ' + Z(1);
+  // nMax también sale del tiempo total de trabajo intenso que tiene sentido en una sesión (topeMin)
+  const series = (L, r, nMin, nMax, z, txt, topeMin) => {
+    if (topeMin) nMax = Math.max(nMin, Math.min(nMax, Math.floor(topeMin / L)));
+    const nn = Math.max(nMin, Math.min(nMax, Math.floor((P + r) / (L + r))));
+    const usado = nn * L + (nn - 1) * r, sobra = P - usado;
+    const out = ['Principal: ' + nn + ' × ' + L + ' min ' + Z(z) + ', con ' + r + ' min ' + (txt || 'suave') + ' entre cada una'];
+    if (sobra >= 5) out.push('Completá con ' + asisR5(sobra) + ' min ' + Z(2));
+    return out;
+  };
+  let b;
+  switch (s.tipo) {
+    case 'suave': b = [ec, 'Principal: ' + P + ' min continuo ' + Z(2), vcT]; break;
+    case 'regenerativa': b = ['Todo ' + min + ' min ' + Z(1)]; break;
+    case 'larga':
+      b = [ec, 'Principal: ' + P + ' min continuo ' + Z(2) + ' — a ritmo de charla, parejo'];
+      if (min >= 75) b.push('Comé y tomá cada 30–40 min (practicá lo que vas a usar en la carrera)');
+      b.push(vcT); break;
+    case 'tecnica':
+      if (s.dep === 'carrera') b = [ec, 'Principal: ' + Math.max(5, P - 8) + ' min ' + Z(2), 'Rectas: 6 × 20 s progresivos (rápidos y sueltos, sin llegar a fondo), 1 min caminando entre cada una', vcT];
+      else if (s.dep === 'bici') b = [ec, 'Cadencia: 5 × 2 min a 100–110 rpm (' + Z(2) + '), 2 min a tu cadencia normal entre cada uno', 'Resto: ' + Math.max(5, P - 20) + ' min ' + Z(2), vcT];
+      else if (s.dep === 'natacion') b = ['Entrada en calor: ' + cal + ' min suave, variando estilos', 'Técnica: 8 × 50 m (2 de cada: patada con tabla, brazada con un brazo, punto muerto, crol completo), 20 s de pausa', 'Principal: ' + Math.max(5, P - 15) + ' min crol continuo · RPE ' + ASIS_RPE[2], 'Vuelta a la calma: ' + vc + ' min muy suave'];
+      else b = [ec, 'Técnica: 6 × 2 min cuidando la rotación del tronco y la entrada de la pala, 1 min suave entre cada uno', 'Resto: ' + Math.max(5, P - 18) + ' min ' + Z(2), vcT];
+      break;
+    case 'tempo': b = [ec].concat(series(8 + Math.round(prog * 7), 3, 1, 4, 3, null, 45), [vcT]); break;
+    case 'umbral':
+      if (s.dep === 'natacion') b = ['Entrada en calor: ' + cal + ' min suave', 'Principal: ' + (6 + Math.round(prog * 4)) + ' × 100 m fuerte sostenido (RPE 7) con 20 s de pausa', 'Resto: crol suave hasta completar ' + min + ' min', 'Vuelta a la calma: ' + vc + ' min muy suave'];
+      else if (s.dep === 'bici') b = [ec].concat(series(6 + Math.round(prog * 6), 3, 2, 6, 4, null, 48), [vcT]);
+      else b = [ec].concat(series(4 + Math.round(prog * 4), 2, 2, 8, 4, 'al trote', 30), [vcT]);
+      break;
+    case 'vo2':
+      if (s.dep === 'bici') b = [ec].concat(series(3, 3, 3, 6, 5, null, 18), [vcT]);
+      else b = [ec].concat(series(2 + Math.round(prog), 2 + Math.round(prog), 3, 6, 5, 'al trote muy suave', 18), [vcT]);
+      break;
+    case 'ritmo': {
+      const L = esp >= 4 ? 6 + Math.round(prog * 4) : esp === 3 ? 12 + Math.round(prog * 8) : 20 + Math.round(prog * 20);
+      if (s.dep === 'natacion') b = ['Entrada en calor: ' + cal + ' min suave', 'Principal: ' + (4 + Math.round(prog * 4)) + ' × 200 m al ritmo que pensás nadar la carrera, 30 s de pausa', 'Resto suave hasta completar ' + min + ' min', 'Vuelta a la calma: ' + vc + ' min'];
+      else b = [ec].concat(series(L, esp >= 4 ? 3 : 5, 1, 4, esp, null, esp >= 4 ? 30 : esp === 3 ? 45 : 60), [vcT]);
+      break;
+    }
+    case 'activacion': b = [Math.max(10, asisR5(min * 0.6)) + ' min ' + Z(2), '4 × 1 min a ritmo de carrera (' + Z(esp) + '), 2 min suave entre cada uno', 'Vuelta a la calma: 5 min ' + Z(1)]; break;
+    case 'transicion': b = ['Apenas bajás de la bici, salí a correr (practicá el cambio rápido de zapatillas)', min + ' min: los primeros 5 ' + Z(2) + ', después a ritmo de carrera ' + Z(esp)]; break;
+    case 'test':
+      b = ['Entrada en calor: 15 min suave, con 3 aceleraciones de 30 s', 'Test: 30 min solo, lo más fuerte que puedas sostener parejo de principio a fin (como si fuera una carrera)',
+        'A los 10 min tocá vuelta (lap): el pulso promedio de los últimos 20 min es tu pulso de umbral' + (s.dep === 'bici' ? '; la potencia promedio × 0,95 es tu FTP (si tenés potenciómetro o rodillo inteligente)' : ''),
+        'Vuelta a la calma: 10 min suave', 'Después cargalo en Datos → Umbrales: todas las zonas del plan se ajustan solas']; break;
+    case 'fuerza': {
+      const v = s.afin ? 2 : (min >= 40 ? 3 : 2);
+      b = ['Movilidad: 8–10 min (cadera, hombros, tobillos)', 'Circuito, ' + v + ' vueltas: sentadilla 10 · peso muerto rumano 10 · estocadas 8 por pierna · remo con banda o mancuerna 12 · flexiones 8–12 · plancha 30–40 s',
+        'Que te queden 2–3 repeticiones en reserva (RPE 6–7)' + (s.afin ? '; más liviano que de costumbre' : ''), 'Descanso: 1 min entre ejercicios, 2 min entre vueltas']; break;
+    }
+    case 'evento':
+      b = ['Entrada en calor: 10–15 min suave con 3 aceleraciones cortas',
+        s.dep === 'tri' ? 'Natación: salí controlado los primeros 200 m · Bici: ' + asisZonaTxt('bici', Math.min(esp, 4), ctx) + ' · Carrera: el primer km un poco más lento de lo que querés' : 'Primer tercio un poco más lento que tu ritmo objetivo (' + Z(esp) + '), después parejo; si sobra, apurá al final',
+        'Comé y tomá solo lo que ya probaste en los entrenamientos (nada nuevo el día de la carrera)']; break;
+    default: b = ['Principal: ' + min + ' min ' + Z(2)];
+  }
+  return b;
+}
+
+// Sesiones de un día, ya armadas para mostrar.
+function asisSesionesDia(plan, iso, ctx) {
+  const w = asisSemanaDe(plan, iso);
+  if (!w) return [];
+  return asisSesionesSemana(plan, w, ctx).filter((s) => s.fecha === iso).map((s) => {
+    const s2 = Object.assign({ prog: w.prog, esp: plan.O.esp, afin: w.tipo === 'afinacion' }, s);
+    const desc = w.tipo === 'descarga' ? ' Semana de descarga: el cuerpo asimila lo entrenado.' : '';
+    return Object.assign(s2, {
+      titulo: ASIS_TITULO[s.tipo] || s.tipo,
+      bloques: asisBloques(s2, ctx),
+      porque: w.fase + ' · semana ' + w.semEnFase + ' de ' + w.totEnFase + ' — ' + (ASIS_RAZON[s.tipo] || '') + '.' + desc,
+      semana: w,
+    });
+  });
+}
+
+// Totales de la semana por deporte (para calcularDia: así Calendario, Forma e Informe usan lo mismo que el asistente)
+function asisTotalesSemana(plan, w, ctx) {
+  const t = {};
+  asisSesionesSemana(plan, w, ctx).forEach((s) => {
+    const d = s.dep === 'tri' ? null : s.dep; if (!d) return;
+    if (!t[d]) t[d] = { min: 0, n: 0 };
+    t[d].min += s.min; if (!s.extra) t[d].n++;
+  });
+  return t;
+}
+
+// El ciclo con el formato de siempre (para Calendario, Forma, Informe y el formulario de modo entrenador).
+function asisConfigCiclo(plan, base) {
+  const p = plan.p, cfg = base;
+  cfg.nombre = (p.eventoNombre || plan.O.txt) + ' · ' + plan.n + ' semanas';
+  cfg.fechaInicio = p.inicio; cfg.totalDias = plan.totalDias;
+  cfg.modelo = plan.modelo; cfg.refIntensidad = 'umbral';
+  cfg.eventoNombre = plan.conEvento ? (p.eventoNombre || plan.O.txt) : ''; cfg.eventoFecha = plan.conEvento ? p.eventoFecha : '';
+  const hs = plan.semanas.map((w) => w.horas);
+  cfg.horasSemana = { inicio: hs[0], fin: Math.max.apply(null, hs) };
+  cfg.taper = plan.conEvento ? { dias: plan.semanas.filter((w) => w.tipo === 'afinacion' || w.tipo === 'evento').length * 7, reduccionPct: 50 } : { dias: 0, reduccionPct: 0 };
+  cfg.patronCargaSemanal = plan.ciclo === 2 ? [100, 100, 60] : [100, 100, 100, 60];
+  // reparto y días de la semana de mayor carga
+  const wPico = plan.semanas.reduce((a, w) => (w.horas > a.horas ? w : a), plan.semanas[0]);
+  const ses = asisSesionesSemana(plan, wPico, {});
+  const totMin = ses.reduce((a, s) => a + (s.dep === 'tri' ? 0 : s.min), 0) || 1;
+  Object.keys(cfg.disciplinas).forEach((k) => {
+    const mias = ses.filter((s) => s.dep === k);
+    const pct = Math.round(100 * mias.reduce((a, s) => a + s.min, 0) / totMin);
+    const n = mias.filter((s) => !s.extra).length;
+    const dias = Array.from(new Set(mias.filter((s) => !s.extra).map((s) => asisDow(s.fecha))));
+    Object.assign(cfg.disciplinas[k], { pctInicio: pct, pctFin: pct, sesionesInicio: n, sesionesFin: n, horario: dias.map((dia) => ({ dia, hora: '18:00' })) });
+  });
+  cfg.asistente = { v: 1, perfil: JSON.parse(JSON.stringify(p)) };
+  return cfg;
+}
+/*ASIS-FIN*/
+
 
 /* ========================= UTILIDADES DE TIEMPO ========================= */
 
@@ -3089,6 +3534,18 @@ function mostrarDetalleDia(iso, real, destinoId) {
     const configConOverrides = Object.assign({}, config, { cargaOverrides: overridesCiclo });
     const diaSemana = new Date(iso + 'T00:00:00').getDay();
     const r = calcularDia(configConOverrides, iso);
+    const planAsis = asisPlanDe(config);
+    if (planAsis) {
+      const lista = asisSesionesDia(planAsis, iso, asisCtx());
+      html += '<p style="margin:8px 0 6px">' + (iso > hoy ? 'Planeado' : 'Plan de ese día') + ' — ' + esc(config.nombre) + ':</p>';
+      if (!lista.length) html += '<p class="hint">Descanso.</p>';
+      lista.forEach((s) => {
+        html += '<details class="asSesHoy"><summary class="t">' + (s.dep === 'tri' ? '🏁' : ASIS_DEP[s.dep]) + ' · <b>' + esc(s.titulo) + '</b>' + (s.min ? ' · ' + s.min + ' min' : '') + '</summary>' +
+          '<ul>' + s.bloques.map((b) => '<li>' + esc(b) + '</li>').join('') + '</ul><div class="hint">' + esc(s.porque) + '</div></details>';
+      });
+      det.innerHTML = html;
+      return;
+    }
     const planeadas = DISCIPLINAS.filter((d) => (config.disciplinas[d.key].horario || []).some((h) => h.dia === diaSemana));
     if (planeadas.length) {
       html += '<p style="margin:8px 0 6px">' + (iso > hoy ? 'Planeado' : 'Plan de ese día') + ' — ' + config.nombre + ':</p>';
@@ -4376,6 +4833,7 @@ function limpiarPlanHoy(mensaje) {
   document.getElementById('zoneBar').innerHTML = '';
   document.getElementById('sesionesZonas').innerHTML = '';
   document.getElementById('pulsoHint').textContent = '';
+  const ah = document.getElementById('asisHoyCard'); if (ah) ah.style.display = 'none';
 }
 
 // Verde = cumplido cerca del plan, degradando a ámbar y a rojo cuanto más lejos (sub o sobre-cumplido
@@ -4443,6 +4901,7 @@ function actualizarPlanHoy() {
   if (document.activeElement !== cargaInput) cargaInput.value = r.pctCarga;
 
   if (!discActivas[fechaISO]) discActivas[fechaISO] = {};
+  try { asisRenderHoy(config, fechaISO); } catch (e) { console.error(e); }
 
   const listEl = document.getElementById('discList');
   listEl.innerHTML = '';
@@ -4455,7 +4914,7 @@ function actualizarPlanHoy() {
     // Si ya asignaste días de la semana a esta disciplina, el default respeta eso (¿hoy es
     // uno de esos días?) en vez de prenderse siempre que haya sesiones/semana > 0 — pero si
     // hiciste algo ese día aunque no estuviera planeado, se prende igual.
-    const defaultActiva = (horario.length ? horario.some((h) => h.dia === diaSemanaFecha) : dd.sesionesSemana > 0) || tieneSesionRealDia(fechaISO, d.key);
+    const defaultActiva = (config.asistente ? !!dd.hoyAsis : (horario.length ? horario.some((h) => h.dia === diaSemanaFecha) : dd.sesionesSemana > 0)) || tieneSesionRealDia(fechaISO, d.key);
     const activa = discActivas[fechaISO][d.key] !== undefined ? discActivas[fechaISO][d.key] : defaultActiva;
     discActivas[fechaISO][d.key] = activa;
 
@@ -4648,6 +5107,260 @@ function renderListaCiclos() {
     });
     el.appendChild(row);
   });
+  asisRenderResumenCiclo();
+}
+
+/* ========================= ASISTENTE: PANTALLAS ========================= */
+// La parte con DOM del asistente (la lógica está en el bloque ASIS, arriba). Un paso por pantalla, botones grandes.
+const ASIS_PLANES = new Map();   // perfil → plan ya calculado (las sesiones se recalculan solas si cambia el umbral)
+function asisCtx() { const u = leerUmbrales(); let edad = null; try { edad = edadEfectiva(leerPerfil()); } catch (e) { console.error(e); } return { u, edad }; }
+function asisPlanDe(config) {
+  if (!config || !config.asistente || !config.asistente.perfil) return null;
+  const ctx = asisCtx(), u = ctx.u;
+  const clave = JSON.stringify(config.asistente.perfil) + '|' + (u.pulsoUmbralCarrera ? 1 : 0) + (u.pulsoUmbralBici || u.ftpBici ? 1 : 0) + '|' + (ctx.edad || '');
+  if (!ASIS_PLANES.has(clave)) ASIS_PLANES.set(clave, asisPlan(config.asistente.perfil, ctx));
+  return ASIS_PLANES.get(clave);
+}
+// calcularDia con el asistente: horas y sesiones de la semana real del plan (así Calendario, Forma e Informe cuentan lo mismo)
+function asisAjustarDia(config, fechaISO, res) {
+  const plan = asisPlanDe(config); if (!plan) return;
+  const w = asisSemanaDe(plan, fechaISO); if (!w) return;
+  const ctx = asisCtx(), tot = asisTotalesSemana(plan, w, ctx);
+  const hoy = asisSesionesSemana(plan, w, ctx).filter((s) => s.fecha === fechaISO);
+  const totMin = Object.keys(tot).reduce((a, k) => a + tot[k].min, 0);
+  res.horasSemana = totMin / 60;
+  res.asis = { semana: w, plan };
+  Object.keys(res.disciplinas).forEach((k) => {
+    const t = tot[k] || { min: 0, n: 0 }, dd = res.disciplinas[k];
+    const hoyMin = hoy.filter((s) => s.dep === k).reduce((a, s) => a + s.min, 0);
+    dd.pct = totMin ? Math.round(100 * t.min / totMin) : 0;
+    dd.sesionesSemana = t.n;
+    dd.tiempoSemanaSeg = t.min * 60;
+    dd.tiempoSesionSeg = hoyMin ? hoyMin * 60 : (t.n ? t.min * 60 / t.n : 0);
+    dd.hoyAsis = hoyMin > 0;
+  });
+}
+
+const ASW = { paso: 0, p: null, reemplaza: null };
+const ASIS_PASOS = ['objetivo', 'fecha', 'nivel', 'deportes', 'horas', 'dias', 'resumen'];
+function asisAbrir(reemplazaId) {
+  const prev = reemplazaId && store.ciclos[reemplazaId] && store.ciclos[reemplazaId].asistente ? store.ciclos[reemplazaId].asistente.perfil : null;
+  ASW.reemplaza = reemplazaId || null;
+  ASW.p = prev ? JSON.parse(JSON.stringify(prev)) : { objetivo: null, eventoFecha: '', eventoNombre: '', nivel: null, horas: null, dias: [1, 3, 5, 6], diaLargo: 6, deportes: [], inicio: hoyISO() };
+  if (prev) ASW.p.inicio = hoyISO() > prev.inicio ? hoyISO() : prev.inicio;
+  ASW.paso = 0;
+  document.getElementById('asisWiz').style.display = 'block';
+  document.getElementById('formCicloCard').style.display = 'none';
+  document.getElementById('asistenteCiclo').style.display = 'none';
+  asisRender();
+  document.getElementById('asisWiz').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function asisCerrar() { document.getElementById('asisWiz').style.display = 'none'; }
+function asisPasoVisible(i) { return !(ASIS_PASOS[i] === 'fecha' && ASW.p.objetivo === 'base'); }
+function asisMover(d) {
+  let i = ASW.paso + d;
+  while (i > 0 && i < ASIS_PASOS.length - 1 && !asisPasoVisible(i)) i += d;
+  ASW.paso = Math.max(0, Math.min(ASIS_PASOS.length - 1, i));
+  asisRender();
+}
+function asisErrorPaso() {
+  const p = ASW.p, k = ASIS_PASOS[ASW.paso];
+  if (k === 'objetivo' && !p.objetivo) return 'Elegí un objetivo.';
+  if (k === 'fecha') {
+    if (!p.eventoFecha) return 'Poné la fecha de la carrera.';
+    if (asisEntre(p.inicio, p.eventoFecha) < 13) return 'La carrera tiene que estar al menos a 2 semanas de la fecha de inicio.';
+    if (asisEntre(p.inicio, p.eventoFecha) > 7 * 40) return 'Faltan más de 40 semanas: armá ahora un ciclo de base y, más cerca, el de la carrera.';
+  }
+  if (k === 'nivel' && !p.nivel) return 'Elegí tu nivel.';
+  if (k === 'deportes' && !p.deportes.filter((d) => d !== 'fuerza').length) return 'Elegí al menos un deporte de resistencia.';
+  if (k === 'dias' && p.dias.length < 2) return 'Elegí al menos 2 días.';
+  return '';
+}
+function asisRender() {
+  const el = document.getElementById('asisWizCuerpo'), p = ASW.p, k = ASIS_PASOS[ASW.paso];
+  const O = ASIS_OBJETIVOS[p.objetivo];
+  const nVis = ASIS_PASOS.filter((_, i) => asisPasoVisible(i)).length, nAct = ASIS_PASOS.slice(0, ASW.paso + 1).filter((_, i) => asisPasoVisible(i)).length;
+  let h = '<div class="hint" style="margin-bottom:8px">Paso ' + nAct + ' de ' + nVis + '</div>';
+  const opt = (sel, val, txt, det) => '<button type="button" class="asOpt' + (sel ? ' on' : '') + '" data-v="' + esc(val) + '"><b>' + esc(txt) + '</b>' + (det ? '<span>' + esc(det) + '</span>' : '') + '</button>';
+  if (k === 'objetivo') {
+    h += '<h3>¿Para qué entrenás?</h3>';
+    Object.keys(ASIS_OBJETIVOS).forEach((key) => { h += opt(p.objetivo === key, key, ASIS_OBJETIVOS[key].txt, ASIS_OBJETIVOS[key].det); });
+  } else if (k === 'fecha') {
+    h += '<h3>¿Cuándo es la carrera?</h3>' +
+      '<div class="field"><label>Fecha de la carrera</label><input type="date" id="asFecha" value="' + esc(p.eventoFecha) + '" min="' + asisSumar(p.inicio, 13) + '"></div>' +
+      '<div class="field"><label>Nombre (opcional)</label><input type="text" id="asNombre" placeholder="Ej: Triatlón de la ciudad" value="' + esc(p.eventoNombre) + '"></div>' +
+      '<div class="field"><label>Empiezo a entrenar el</label><input type="date" id="asInicio" value="' + esc(p.inicio) + '"></div>' +
+      (p.eventoFecha && p.eventoFecha >= p.inicio ? '<p class="hint">Faltan ' + Math.ceil((asisEntre(p.inicio, p.eventoFecha) + 1) / 7) + ' semanas.</p>' : '');
+  } else if (k === 'nivel') {
+    h += '<h3>¿Cuánta experiencia tenés?</h3>';
+    Object.keys(ASIS_NIVELES).forEach((key) => { h += opt(p.nivel === key, key, ASIS_NIVELES[key].txt, ASIS_NIVELES[key].det); });
+  } else if (k === 'deportes') {
+    h += '<h3>¿Qué deportes vas a entrenar?</h3><p class="hint">Ya están marcados los de tu objetivo. La fuerza (2 veces por semana, 30–40 min) se recomienda a cualquier edad.</p><div class="asChips" id="asDep">';
+    Object.keys(ASIS_DEP).forEach((d) => { h += '<button type="button" data-v="' + d + '" class="' + (p.deportes.includes(d) ? 'on' : '') + '">' + ASIS_DEP[d] + '</button>'; });
+    h += '</div>';
+  } else if (k === 'horas') {
+    const t = O ? O.horas : [3, 8];
+    if (p.horas == null) p.horas = t[0] + Math.round((t[1] - t[0]) / 3);
+    h += '<h3>¿Cuántas horas por semana podés entrenar, como máximo?</h3>' +
+      '<div style="font-size:2rem;font-weight:700;text-align:center;margin:8px 0" id="asHorasV">' + fmtN(p.horas, p.horas % 1 ? 1 : 0) + ' h</div>' +
+      '<input type="range" id="asHoras" min="2" max="20" step="0.5" value="' + p.horas + '" style="width:100%">' +
+      '<p class="hint">Para ' + esc(O ? O.txt.toLowerCase() : 'tu objetivo') + ' suele alcanzar con ' + t[0] + ' a ' + t[1] + ' h en las semanas más cargadas. El plan arranca más abajo y sube de a poco hasta este máximo.</p>' +
+      (p.horas < t[0] ? '<p class="hint" style="color:var(--warn)">Con menos de ' + t[0] + ' h se puede terminar, pero sin apurar el ritmo: priorizá llegar bien.</p>' : '');
+  } else if (k === 'dias') {
+    h += '<h3>¿Qué días podés entrenar?</h3><div class="asChips" id="asDias">';
+    [1, 2, 3, 4, 5, 6, 0].forEach((d) => { h += '<button type="button" data-v="' + d + '" class="' + (p.dias.includes(d) ? 'on' : '') + '">' + ASIS_DIAS[d].slice(0, 3) + '</button>'; });
+    h += '</div><div class="field" style="margin-top:12px"><label>¿Qué día tenés más tiempo? (va la sesión larga)</label><select id="asLargo">';
+    p.dias.slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).forEach((d) => { h += '<option value="' + d + '"' + (d === p.diaLargo ? ' selected' : '') + '>' + ASIS_DIAS[d] + '</option>'; });
+    h += '</select></div><p class="hint">Con pocos días, algunos llevan dos sesiones cortas (por ejemplo natación y fuerza).</p>';
+  } else if (k === 'resumen') {
+    h += asisHtmlResumen(p);
+  }
+  const err = ASW.err || '';
+  h += '<p class="hint" id="asisErr" style="color:var(--warn);' + (err ? '' : 'display:none') + '">' + esc(err) + '</p><div class="btnRow">' +
+    (ASW.paso > 0 ? '<button type="button" id="asisAtras">‹ Atrás</button>' : '') +
+    (k === 'resumen' ? '<button type="button" class="primary" id="asisCrear">' + (ASW.reemplaza ? 'Rehacer mi plan' : 'Crear mi plan') + '</button>' : '<button type="button" class="primary" id="asisSeguir">Seguir ›</button>') +
+    '<button type="button" id="asisCancelar">Cancelar</button></div>';
+  el.innerHTML = h; ASW.err = '';
+  // eventos
+  el.querySelectorAll('.asOpt').forEach((b) => b.addEventListener('click', () => {
+    if (k === 'objetivo') { const nuevo = b.dataset.v; if (nuevo !== p.objetivo) { p.objetivo = nuevo; p.deportes = ASIS_OBJETIVOS[nuevo].dep.concat(ASIS_OBJETIVOS[nuevo].dep.includes('fuerza') ? [] : ['fuerza']); p.horas = null; } }
+    if (k === 'nivel') p.nivel = b.dataset.v;
+    asisMover(1);
+  }));
+  const val = (id) => { const e = document.getElementById(id); return e ? e.value : ''; };
+  if (k === 'fecha') ['asFecha', 'asNombre', 'asInicio'].forEach((id) => document.getElementById(id).addEventListener('change', () => {
+    p.eventoFecha = val('asFecha'); p.eventoNombre = val('asNombre').trim(); p.inicio = val('asInicio') || hoyISO(); asisRender();
+  }));
+  if (k === 'deportes') el.querySelectorAll('#asDep button').forEach((b) => b.addEventListener('click', () => {
+    const d = b.dataset.v; p.deportes = p.deportes.includes(d) ? p.deportes.filter((x) => x !== d) : p.deportes.concat([d]); asisRender();
+  }));
+  if (k === 'horas') { const r = document.getElementById('asHoras'); r.addEventListener('input', () => { p.horas = parseFloat(r.value); document.getElementById('asHorasV').textContent = fmtN(p.horas, p.horas % 1 ? 1 : 0) + ' h'; }); r.addEventListener('change', asisRender); }
+  if (k === 'dias') {
+    el.querySelectorAll('#asDias button').forEach((b) => b.addEventListener('click', () => {
+      const d = parseInt(b.dataset.v, 10); p.dias = p.dias.includes(d) ? p.dias.filter((x) => x !== d) : p.dias.concat([d]);
+      if (!p.dias.includes(p.diaLargo)) p.diaLargo = p.dias.includes(6) ? 6 : (p.dias.includes(0) ? 0 : p.dias[p.dias.length - 1]);
+      asisRender();
+    }));
+    document.getElementById('asLargo').addEventListener('change', (e) => { p.diaLargo = parseInt(e.target.value, 10); });
+  }
+  const bS = document.getElementById('asisSeguir'); if (bS) bS.addEventListener('click', () => {
+    if (k === 'fecha') { p.eventoFecha = val('asFecha'); p.eventoNombre = val('asNombre').trim(); p.inicio = val('asInicio') || hoyISO(); }
+    const e = asisErrorPaso(); if (e) { ASW.err = e; asisRender(); return; }
+    asisMover(1);
+  });
+  const bA = document.getElementById('asisAtras'); if (bA) bA.addEventListener('click', () => asisMover(-1));
+  document.getElementById('asisCancelar').addEventListener('click', asisCerrar);
+  const bC = document.getElementById('asisCrear'); if (bC) bC.addEventListener('click', asisCrear);
+}
+
+function asisHtmlSesionesLista(lista) {
+  return lista.map((s) => '<div class="asSes"><div class="t">' + (s.dep === 'tri' ? '🏁' : (ASIS_DEP[s.dep] || '').split(' ')[0]) + ' ' +
+    esc(ASIS_DIAS[asisDow(s.fecha)].slice(0, 3)) + ' ' + fechaCorta(s.fecha) + ' · <b>' + esc(ASIS_TITULO[s.tipo] || s.tipo) + '</b>' + (s.min ? ' · ' + s.min + ' min' : '') + '</div></div>').join('');
+}
+function asisHtmlFases(plan) {
+  const hoy = hoyISO();
+  return '<div class="asFases">' + plan.fases.map((f) => {
+    const hasta = asisSumar(f.desde, f.semanas * 7 - 1);
+    const ahora = hoy >= f.desde && hoy <= hasta;
+    return '<div class="asFase' + (ahora ? ' ahora' : '') + '" style="flex:' + f.semanas + '"><b>' + esc(f.nombre) + '</b><span>' + f.semanas + ' sem · desde ' + fechaCorta(f.desde) + '</span></div>';
+  }).join('') + '</div>' + plan.fases.map((f) => '<p class="hint" style="margin:2px 0"><b>' + esc(f.nombre) + ':</b> ' + esc(f.foco) + '.</p>').join('');
+}
+function asisHtmlResumen(p) {
+  const ctx = asisCtx(), plan = asisPlan(p, ctx), O = plan.O;
+  let h = '<h3>Tu plan</h3><p><b>' + esc(p.eventoNombre || O.txt) + '</b>' + (plan.conEvento ? ' · ' + fechaLarga(p.eventoFecha) : '') + ' · ' + plan.n + ' semanas · hasta ' + fmtN(Math.max.apply(null, plan.semanas.map((w) => w.horas)), 1) + ' h por semana</p>';
+  h += '<p style="margin:8px 0 4px"><b>Por qué así</b></p><ul class="asUl">' + plan.porque.map((t) => '<li>' + esc(t) + '</li>').join('') + '</ul>';
+  h += '<p style="margin:10px 0 4px"><b>Fases</b></p>' + asisHtmlFases(plan);
+  h += '<p style="margin:10px 0 4px"><b>Primera semana</b> (' + fmtN(plan.semanas[0].horas, 2) + ' h)</p>' + asisHtmlSesionesLista(asisSesionesSemana(plan, plan.semanas[0], ctx));
+  const falta = [];
+  const u = ctx.u, deps = p.deportes;
+  const sinUmbral = [['carrera', u.pulsoUmbralCarrera], ['bici', u.pulsoUmbralBici || u.ftpBici], ['kayak', u.pulsoUmbralKayak]].filter(([d, v]) => deps.includes(d) && !v).map(([d]) => ASIS_DEP[d].split(' ')[1]);
+  if (sinUmbral.length) falta.push('No tenés umbral de ' + sinUmbral.join(', ').toLowerCase() + ': ' + (p.nivel === 'inicio' ? 'las zonas salen de la sensación de esfuerzo (RPE)' : 'la primera semana trae un test de 30 min para medirlo') + (ctx.edad ? ', y mientras tanto el pulso se estima por tu edad (≈).' : '. Cargá tu fecha de nacimiento en Datos → Perfil para estimar el pulso mientras tanto.'));
+  if (deps.includes('natacion')) falta.push('En natación las zonas van por sensación (RPE): todavía no hay umbral de natación.');
+  if (falta.length) h += '<p style="margin:10px 0 4px"><b>Para tener en cuenta</b></p><ul class="asUl">' + falta.map((t) => '<li>' + esc(t) + '</li>').join('') + '</ul>';
+  h += '<p class="hint" style="margin-top:8px">Es una guía hecha con reglas generales de entrenamiento: si tenés una lesión o una condición de salud, consultalo con tu médico o un entrenador. Todo se puede ajustar después en modo entrenador.</p>';
+  return h;
+}
+
+// ciclos que se pisan con [desde, hasta] (sin contar el que se rehace)
+function asisSolapados(desde, hasta, excepto) {
+  return Object.keys(store.ciclos).filter((id) => id !== excepto).map((id) => ({ id, c: store.ciclos[id] })).filter(({ c }) => {
+    if (!c.fechaInicio) return false;
+    const fin = asisSumar(c.fechaInicio, (c.totalDias || 1) - 1);
+    return c.fechaInicio <= hasta && fin >= desde;
+  });
+}
+function asisCrear() {
+  const p = ASW.p, errs = asisValidar(p);
+  if (errs.length) { ASW.err = errs.join(' '); asisRender(); return; }
+  const plan = asisPlan(p, asisCtx());
+  const hasta = asisSumar(p.inicio, plan.totalDias - 1);
+  const sol = asisSolapados(p.inicio, hasta, ASW.reemplaza);
+  const noSePuede = sol.filter(({ c }) => c.fechaInicio >= p.inicio);
+  if (noSePuede.length) {
+    ASW.err = 'El ciclo «' + noSePuede.map(({ c }) => c.nombre).join('», «') + '» empieza dentro de estas fechas. Borralo en Datos o cambiale la fecha en modo entrenador, y volvé a crear el plan.';
+    asisRender(); return;
+  }
+  if (sol.length && !confirm('El ciclo «' + sol.map(({ c }) => c.nombre).join('», «') + '» sigue en estas fechas. Lo acorto para que termine el ' + fechaLarga(asisSumar(p.inicio, -1)) + '. ¿Seguimos?')) return;
+  const cfg = asisConfigCiclo(plan, configBase());
+  const id = ASW.reemplaza || ('c' + Date.now());
+  const antes = JSON.stringify({ ciclos: store.ciclos, activoId: store.activoId });
+  sol.forEach(({ c }) => { c.totalDias = Math.max(1, asisEntre(c.fechaInicio, p.inicio)); });
+  store.ciclos[id] = cfg; store.activoId = id;
+  try { guardarStore(store); }
+  catch (e) {
+    const prev = JSON.parse(antes); store.ciclos = prev.ciclos; store.activoId = prev.activoId;
+    ASW.err = 'No pude guardar el plan (' + (e && e.message || e) + '). No se cambió nada.'; asisRender(); return;
+  }
+  ASIS_PLANES.clear();
+  asisCerrar();
+  renderListaCiclos(); renderHeader(); actualizarProximoEventoCompartido(); asisRenderResumenCiclo();
+  toast('Plan creado ✓ — mirá "Plan de hoy"');
+}
+
+// Tarjeta del plan activo en la pestaña Ciclo
+function asisRenderResumenCiclo() {
+  const el = document.getElementById('asisResumen'); if (!el) return;
+  const id = store.activoId, c = id ? store.ciclos[id] : null, plan = asisPlanDe(c);
+  if (!plan) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  const ctx = asisCtx(), hoy = hoyISO(), wHoy = asisSemanaDe(plan, hoy);
+  let h = '<h3>🧭 ' + esc(c.nombre) + '</h3>' + asisHtmlFases(plan) +
+    '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">Por qué está armado así</summary><ul class="asUl">' + plan.porque.map((t) => '<li>' + esc(t) + '</li>').join('') + '</ul></details>' +
+    '<details style="margin-top:6px"' + (wHoy ? ' open' : '') + '><summary style="cursor:pointer;font-weight:600">Semanas (microciclos)</summary><div class="asSemanas">';
+  plan.semanas.forEach((w) => {
+    const ses = asisSesionesSemana(plan, w, ctx), min = ses.reduce((a, s) => a + s.min, 0);
+    const etq = { carga: 'carga', descarga: 'descarga', afinacion: 'afinación', evento: 'carrera' }[w.tipo];
+    h += '<details class="asSem' + (w === wHoy ? ' ahora' : '') + '"' + (w === wHoy ? ' open' : '') + '><summary>S' + w.n + ' · ' + fechaCorta(w.desde) + ' · ' + esc(w.fase) + ' · ' + etq + ' · ' + fmtN(min / 60, 1) + ' h</summary>' + asisHtmlSesionesLista(ses) + '</details>';
+  });
+  h += '</div></details><div class="btnRow" style="margin-top:10px"><button type="button" id="asisRehacer">Rehacer con el asistente</button></div>';
+  el.innerHTML = h; el.style.display = 'block';
+  document.getElementById('asisRehacer').addEventListener('click', () => asisAbrir(id));
+}
+
+// Plan de hoy: las sesiones del día, completas
+function asisRenderHoy(config, fechaISO) {
+  const card = document.getElementById('asisHoyCard'), series = document.getElementById('cardSeriesSugeridas');
+  const plan = asisPlanDe(config);
+  if (series) series.style.display = plan ? 'none' : '';
+  if (!plan) { card.style.display = 'none'; return; }
+  const ctx = asisCtx(), w = asisSemanaDe(plan, fechaISO), lista = asisSesionesDia(plan, fechaISO, ctx);
+  let h = '<h3>' + (fechaISO === hoyISO() ? 'Tu sesión de hoy' : 'Sesión del ' + fechaLarga(fechaISO)) + '</h3>';
+  if (w) {
+    const min = asisSesionesSemana(plan, w, ctx).reduce((a, s) => a + s.min, 0);
+    h += '<p class="hint" style="margin-bottom:8px">' + esc(w.fase) + ' · semana ' + w.semEnFase + ' de ' + w.totEnFase + (w.tipo === 'descarga' ? ' · descarga' : '') + ' · ' + fmtN(min / 60, 1) + ' h esta semana</p>';
+  }
+  if (!lista.length) h += '<p>Hoy no hay sesión: descanso. Caminar, movilidad o estirar suave suman sin cansar.</p>';
+  const yaPaso = fechaISO <= hoyISO();
+  lista.forEach((s) => {
+    let real = '';
+    if (yaPaso && s.dep !== 'tri' && s.min) {
+      const seg = duracionRealDia(fechaISO, s.dep);
+      if (seg != null) real = seg > 0 ? '<div class="cumplimiento" style="color:' + colorCumplimiento(seg / (s.min * 60)) + '">hecho: ' + segARelojes(seg) + ' de ' + s.min + ' min</div>' : '<div class="cumplimiento" style="color:' + colorCumplimiento(2) + '">todavía no se registró</div>';
+      else if (tieneSesionRealDia(fechaISO, s.dep)) real = '<div class="cumplimiento" style="color:' + colorCumplimiento(1) + '">hecho ✓</div>';
+    }
+    h += '<div class="asSesHoy"><div class="t">' + (s.dep === 'tri' ? '🏁' : ASIS_DEP[s.dep]) + ' · <b>' + esc(s.titulo) + '</b>' + (s.min ? ' · ' + s.min + ' min' : '') + '</div>' +
+      '<ul>' + s.bloques.map((b) => '<li>' + esc(b) + '</li>').join('') + '</ul><div class="hint">Por qué: ' + esc(s.porque) + '</div>' + real + '</div>';
+  });
+  card.innerHTML = h; card.style.display = 'block';
 }
 
 /* ========================= FORMULARIO DE CICLO ========================= */
@@ -4794,6 +5507,7 @@ function renderTablaZonas() {
   });
 }
 
+document.getElementById('btnAsistente').addEventListener('click', () => asisAbrir(null));
 document.getElementById('btnNuevoCiclo').addEventListener('click', () => { if (prefCiclo()) abrirFormularioCiclo(null); else abrirAsistenteCiclo(); });
 /* ---------- asistente del primer ciclo ---------- */
 let asSel = { deportes: [], modelo: 'tradicional' };
